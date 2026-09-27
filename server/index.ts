@@ -12,7 +12,7 @@ import { reflect, openingThought, reflectionsAvailable } from "./reflect";
 import { illustrate, illustrationsAvailable } from "./illustrate";
 import { placeName } from "./place";
 import { startReminders, remindersAvailable } from "./reminders";
-import { supabaseAdmin, userFromToken } from "./supabaseAdmin";
+import { accountsConfigured, supabaseAdmin, userFromToken } from "./supabaseAdmin";
 import { RateLimiter } from "./rateLimit";
 
 /**
@@ -21,7 +21,9 @@ import { RateLimiter } from "./rateLimit";
  */
 
 const app = new Hono();
-const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
+// With accounts set up, AI features are for signed-in people only, so a public
+// address can't run up the AI bill. AUTH_REQUIRED=false opens them to guests.
+const AUTH_REQUIRED = process.env.AUTH_REQUIRED ? process.env.AUTH_REQUIRED === "true" : accountsConfigured();
 const PROD = process.env.NODE_ENV === "production";
 
 const limits = {
@@ -60,6 +62,7 @@ app.get("/api/config", (c) => {
     reflections: reflectionsAvailable(),
     illustrations: illustrationsAvailable(),
     vapidPublicKey: remindersAvailable() ? process.env.VAPID_PUBLIC_KEY! : null,
+    aiNeedsAccount: AUTH_REQUIRED,
   };
   return c.json(config);
 });
@@ -162,5 +165,6 @@ serve({ fetch: app.fetch, port }, () => {
   console.log(`  reflections: ${reflectionsAvailable() ? "on" : "off (starter library)"}`);
   console.log(`  illustrations: ${illustrationsAvailable() ? "on" : "off (drawn vignettes)"}`);
   console.log(`  reminders: ${remindersAvailable() ? "on" : "off"}`);
+  console.log(`  accounts: ${accountsConfigured() ? "on" : "off"}${AUTH_REQUIRED ? " (AI for signed-in people only)" : ""}`);
 });
 startReminders();

@@ -59,6 +59,13 @@ export function serverConfig(): Promise<ServerConfig | null> {
   return configPromise;
 }
 
+/** What the server will do for this person: guests get no AI when it asks for an account. */
+export async function aiConfig(): Promise<ServerConfig | null> {
+  const config = await serverConfig();
+  if (config?.aiNeedsAccount && !(await accessToken())) return { ...config, reflections: false, illustrations: false };
+  return config;
+}
+
 /** The server validates every result against the schema before it answers. */
 export function requestReflection(req: ReflectRequest): Promise<ReflectionResult> {
   return call<ReflectionResult>("/api/reflect", {

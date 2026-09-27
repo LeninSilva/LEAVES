@@ -5,7 +5,7 @@ import {
   requestIllustration,
   requestOpeningThought,
   requestReflection,
-  serverConfig,
+  aiConfig,
 } from "./ai";
 import { finishedEntries, getBlob, getEntry, getMeta, getSettings, putBlob, saveMeta, updateEntry, deleteBlob } from "./db";
 import { describeWhen, naturalMoment } from "./dates";
@@ -99,7 +99,7 @@ async function runReflection(entry: Entry, onlyReflection: boolean): Promise<"do
   }
   let config;
   try {
-    config = await serverConfig();
+    config = await aiConfig();
   } catch (err) {
     if (err instanceof OfflineError) return "waiting";
     throw err;
@@ -172,7 +172,7 @@ async function runIllustration(entry: Entry): Promise<"done" | "waiting"> {
   }
   let config;
   try {
-    config = await serverConfig();
+    config = await aiConfig();
   } catch (err) {
     if (err instanceof OfflineError) return "waiting";
     throw err;
@@ -259,7 +259,7 @@ export async function prepareOpeningThought() {
   const [settings, meta] = await Promise.all([getSettings(), getMeta()]);
   if (!settings.openingThought) return;
   try {
-    const config = await serverConfig();
+    const config = await aiConfig();
     if (!config?.reflections) return;
     const thought = await requestOpeningThought({
       recentVoices: [...meta.recentOpeningVoices, ...meta.recentVoices].slice(0, 20),

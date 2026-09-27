@@ -5,7 +5,7 @@ import { mountAnnouncer } from "./lib/announce";
 import { resumePending } from "./lib/pipeline";
 import { match, navigate, usePath, useRouteState } from "./lib/router";
 import { useEntry, useMeta, useSettings } from "./lib/store";
-import { startSync } from "./lib/sync";
+import { startAccount } from "./lib/session";
 import { applyAppearance } from "./lib/theme";
 import { EditEntry, Write } from "./screens/Write";
 import { EntryScreen } from "./screens/EntryScreen";
@@ -17,6 +17,7 @@ const ReflectionsScreen = lazy(() => import("./screens/ReflectionsScreen").then(
 const SettingsScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.SettingsScreen })));
 const HowAIScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.HowAIScreen })));
 const AccountScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.AccountScreen })));
+const ResetPasswordScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.ResetPasswordScreen })));
 const SharedEntryPage = lazy(() => import("./screens/SharedPages").then((m) => ({ default: m.SharedEntryPage })));
 const PublicPageView = lazy(() => import("./screens/SharedPages").then((m) => ({ default: m.PublicPageView })));
 
@@ -27,6 +28,7 @@ const TITLES: Record<string, string> = {
   "/settings": "Settings",
   "/settings/ai": "How AI is used",
   "/settings/account": "Account",
+  "/reset-password": "New password",
   "/welcome": "Leaves",
 };
 
@@ -81,7 +83,7 @@ export function App() {
     mountAnnouncer();
     if (isPublicPath(location.pathname)) return;
     void resumePending();
-    void startSync();
+    void startAccount();
     const online = () => void resumePending();
     window.addEventListener("online", online);
     return () => window.removeEventListener("online", online);
@@ -93,7 +95,8 @@ export function App() {
 
   // First launch shows one screen, then never again. Checked once, when the app opens.
   useEffect(() => {
-    if (metaReady && !meta.welcomed && !isPublicPath(location.pathname) && location.pathname !== "/welcome") {
+    const here = location.pathname;
+    if (metaReady && !meta.welcomed && !isPublicPath(here) && here !== "/welcome" && here !== "/reset-password") {
       navigate("/welcome", { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,6 +117,7 @@ export function App() {
   else if (path === "/settings") screen = <SettingsScreen />;
   else if (path === "/settings/ai") screen = <HowAIScreen />;
   else if (path === "/settings/account") screen = <AccountScreen />;
+  else if (path === "/reset-password") screen = <ResetPasswordScreen />;
   else
     screen = (
       <main className="page" id="main">

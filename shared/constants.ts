@@ -100,4 +100,6 @@ export interface ServerConfig {
   reflections: boolean;
   illustrations: boolean;
   vapidPublicKey: string | null;
+  /** AI features answer only signed-in accounts. Guests get the starter library and drawings. */
+  aiNeedsAccount: boolean;
 }

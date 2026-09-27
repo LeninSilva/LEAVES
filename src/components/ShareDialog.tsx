@@ -56,7 +56,7 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
   };
 
   const theme = document.documentElement.dataset.theme === "lamplight" ? "lamplight" : "daylight";
-  const cloudReady = cloudConfigured && auth.user;
+  const cloudReady = cloudConfigured && auth.signedIn;
   const snap = { withPhoto, withReflection, withPlace };
   const link = entry.share.linkToken ? shareUrl(entry.share.linkToken) : null;
 

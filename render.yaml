@@ -1,0 +1,28 @@
+# One-click hosting on Render: https://render.com/deploy
+# Render asks for each value marked "sync: false" when you create the service.
+services:
+  - type: web
+    name: leaves
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Accounts and backup (Supabase > Project Settings > API)
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Reflections (console.anthropic.com). Leave empty to use the starter library.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # AI illustrations. Leave both empty for hand-drawn vignettes.
+      - key: IMAGE_PROVIDER
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

@@ -219,9 +219,9 @@ export function SettingsScreen() {
           <p className="setting__hint">
             {!cloudConfigured
               ? "Your entries are kept on this device only."
-              : auth.user && !auth.anonymous
-                ? `Signed in as ${auth.user.email ?? "you"}. Your entries are backed up.`
-                : "Your entries are on this device. Sign in to back them up."}
+              : auth.signedIn
+                ? `Signed in as ${auth.user?.email ?? "you"}. Your entries are backed up.`
+                : "Your entries are on this device only. Sign in to back them up."}
           </p>
           {cloudConfigured ? (
             <button type="button" className="button button--soft" onClick={() => go("/settings/account")}>

@@ -1,5 +1,5 @@
 import { serverConfig } from "./ai";
-import { supabase, ensureSession } from "./auth";
+import { currentUser, isAccount, supabase } from "./auth";
 import { currentTimeZone, zonedParts } from "./dates";
 
 /**
@@ -25,10 +25,10 @@ export async function enableReminder(time: string): Promise<ReminderResult> {
   const config = await serverConfig().catch(() => null);
   const sb = await supabase();
   if (!config?.vapidPublicKey || !sb) return { ok: false, message: "Reminders aren't set up on this server." };
+  const user = await currentUser();
+  if (!isAccount(user)) return { ok: false, message: "Sign in to get a daily reminder." };
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return { ok: false, message: "Notifications are turned off for Leaves in your settings." };
-  const user = await ensureSession();
-  if (!user) return { ok: false, message: "Couldn't connect. Try again when you're online." };
   const reg = await navigator.serviceWorker.ready;
   const sub =
     (await reg.pushManager.getSubscription()) ??
@@ -52,8 +52,9 @@ export async function enableReminder(time: string): Promise<ReminderResult> {
 
 export async function disableReminder(): Promise<void> {
   try {
-    const reg = await navigator.serviceWorker?.ready;
-    const sub = await reg?.pushManager.getSubscription();
+    // getRegistration, not ready: ready never settles where no worker was registered.
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const sub = await reg?.pushManager?.getSubscription();
     const sb = await supabase();
     if (sub && sb) await sb.from("reminders").delete().eq("endpoint", sub.endpoint);
     await sub?.unsubscribe();

@@ -1,6 +1,6 @@
 -- Leaves: cloud backup, sharing and reminders.
 -- Every table uses row-level security so each person sees only their own rows.
--- Enable "Anonymous sign-ins" in Supabase Auth so people can write before signing in.
+-- Each account's rows are its own; the app also keeps a separate notebook per account on each device.
 
 -- ---------------------------------------------------------------------------
 -- Entries: one row per entry, holding its JSON. updated_at is the writer's

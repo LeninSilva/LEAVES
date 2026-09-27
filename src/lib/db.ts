@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import { activeAccount } from "./account";
 import { DEFAULT_META, DEFAULT_SETTINGS, type Entry, type Meta, type Settings } from "./types";
 
 interface LeavesDB extends DBSchema {
@@ -14,29 +15,91 @@ export interface Tombstone {
   blobKeys: string[];
 }
 
-const DB_NAME = "leaves";
+// Each account has its own notebook on the device, so two people sharing a
+// phone or laptop never see each other's pages. "leaves" holds a guest's pages.
+const GUEST_DB = "leaves";
+const dbName = (account: string | null) => (account ? `leaves-${account}` : GUEST_DB);
 let dbPromise: Promise<IDBPDatabase<LeavesDB>> | null = null;
 
+function openNotebook(name: string) {
+  return openDB<LeavesDB>(name, 1, {
+    upgrade(d) {
+      const entries = d.createObjectStore("entries", { keyPath: "id" });
+      entries.createIndex("status", "status");
+      d.createObjectStore("blobs");
+      d.createObjectStore("kv");
+      d.createObjectStore("tombstones", { keyPath: "id" });
+    },
+  });
+}
+
 export function db(): Promise<IDBPDatabase<LeavesDB>> {
-  if (!dbPromise) {
-    dbPromise = openDB<LeavesDB>(DB_NAME, 1, {
-      upgrade(d) {
-        const entries = d.createObjectStore("entries", { keyPath: "id" });
-        entries.createIndex("status", "status");
-        d.createObjectStore("blobs");
-        d.createObjectStore("kv");
-        d.createObjectStore("tombstones", { keyPath: "id" });
-      },
-    });
-  }
+  if (!dbPromise) dbPromise = openNotebook(dbName(activeAccount()));
   return dbPromise;
+}
+
+/**
+ * Readies an account's notebook before switching to it. The first time
+ * someone signs in on this device, pages they wrote as a guest move into
+ * their account (and then back up), so nothing they wrote is lost.
+ */
+export async function prepareNotebook(account: string, opts: { adoptGuest: boolean }) {
+  const target = await openNotebook(dbName(account));
+  if (opts.adoptGuest) {
+    const guest = await openNotebook(GUEST_DB);
+    const [entries, blobKeys, guestMeta, guestSettings, targetSettings] = await Promise.all([
+      guest.getAll("entries"),
+      guest.getAllKeys("blobs"),
+      guest.get("kv", "meta") as Promise<Partial<Meta> | undefined>,
+      guest.get("kv", "settings") as Promise<Settings | undefined>,
+      target.get("kv", "settings") as Promise<Settings | undefined>,
+    ]);
+    const blobs = await Promise.all(blobKeys.map(async (k) => [k, await guest.get("blobs", k)] as const));
+    const tx = target.transaction(["entries", "blobs", "kv"], "readwrite");
+    for (const e of entries) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { syncedAt, ...rest } = e;
+      await tx.objectStore("entries").put({ ...rest, updatedAt: Date.now() });
+    }
+    for (const [k, b] of blobs) if (b) await tx.objectStore("blobs").put(b, k);
+    if (guestSettings && !targetSettings) await tx.objectStore("kv").put(guestSettings, "settings");
+    const targetMeta = (await tx.objectStore("kv").get("meta")) as Partial<Meta> | undefined;
+    const meta = { ...DEFAULT_META, ...guestMeta, ...targetMeta, lastPullAt: targetMeta?.lastPullAt ?? null };
+    await tx.objectStore("kv").put({ ...meta, welcomed: true, signInNudgeShown: true }, "meta");
+    await tx.done;
+    const clear = guest.transaction(["entries", "blobs", "kv", "tombstones"], "readwrite");
+    await Promise.all(["entries", "blobs", "kv", "tombstones"].map((s) => clear.objectStore(s as "kv").clear()));
+    await clear.done;
+    guest.close();
+  } else {
+    const meta = (await target.get("kv", "meta")) as Partial<Meta> | undefined;
+    await target.put("kv", { ...DEFAULT_META, ...meta, welcomed: true, signInNudgeShown: true }, "meta");
+  }
+  target.close();
+}
+
+/** Removes an account's notebook from this device (its backup stays in the cloud). */
+export async function forgetNotebook(account: string) {
+  if (dbPromise) (await dbPromise).close();
+  dbPromise = null;
+  await new Promise<void>((resolve) => {
+    const req = indexedDB.deleteDatabase(dbName(account));
+    req.onsuccess = req.onerror = req.onblocked = () => resolve();
+  });
+}
+
+/** How many changes on this device haven't reached the backup yet. */
+export async function unsyncedCount(): Promise<number> {
+  const d = await db();
+  const [entries, marks] = await Promise.all([d.getAll("entries"), d.getAll("tombstones")]);
+  return entries.filter((e) => !e.syncedAt || e.updatedAt > e.syncedAt).length + marks.length;
 }
 
 // ---- change notifications -------------------------------------------------
 
 type Topic = "entries" | "settings" | "meta" | "blobs";
 const listeners = new Map<Topic, Set<() => void>>();
-const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("leaves") : null;
+const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(dbName(activeAccount())) : null;
 
 channel?.addEventListener("message", (e: MessageEvent<Topic>) => emitLocal(e.data));
 
@@ -257,10 +320,16 @@ export async function wipeLocal() {
     tx.objectStore("tombstones").clear(),
   ]);
   await tx.done;
+  clearDraftBackups();
+  (["entries", "settings", "meta", "blobs"] as Topic[]).forEach(emit);
+}
+
+function clearDraftBackups() {
   try {
-    localStorage.clear();
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("leaves.draft."))
+      .forEach((k) => localStorage.removeItem(k));
   } catch {
     /* storage may be unavailable */
   }
-  (["entries", "settings", "meta", "blobs"] as Topic[]).forEach(emit);
 }

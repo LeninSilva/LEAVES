@@ -16,7 +16,8 @@ import {
   subscribe,
   tombstones,
 } from "./db";
-import { ensureSession, supabase } from "./auth";
+import { activeAccount } from "./account";
+import { currentUser, isAccount, supabase } from "./auth";
 import type { Entry, Settings } from "./types";
 
 /**
@@ -161,8 +162,9 @@ export async function syncNow(): Promise<void> {
     return;
   }
   if (!navigator.onLine) return;
-  const user = await ensureSession();
-  if (!user) return;
+  const user = await currentUser();
+  // Only back up the notebook that belongs to the signed-in account.
+  if (!isAccount(user) || user.id !== activeAccount()) return;
   running = true;
   try {
     await pull();

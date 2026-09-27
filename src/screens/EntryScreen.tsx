@@ -57,7 +57,7 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
     if (removed) showToast("Entry deleted.", { label: "Undo", run: () => void restoreEntry(removed) }, 7000);
   };
 
-  const showNudge = celebrate && cloudConfigured && auth.ready && auth.anonymous && !meta.signInNudgeShown;
+  const showNudge = celebrate && cloudConfigured && auth.ready && !auth.signedIn && !meta.signInNudgeShown;
 
   return (
     <>
@@ -146,7 +146,7 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
 
         {showNudge ? (
           <aside className="nudge" aria-label="Back up your entries">
-            <p>Your entries live on this phone. Sign in to back them up and read them anywhere.</p>
+            <p>This entry lives only on this device. Make a free account to back it up and read it anywhere.</p>
             <div className="nudge__actions">
               <button type="button" className="button button--soft" onClick={() => void saveMeta({ signInNudgeShown: true })}>
                 Not now
@@ -156,10 +156,10 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
                 className="button"
                 onClick={() => {
                   void saveMeta({ signInNudgeShown: true });
-                  go("/settings/account");
+                  go("/settings/account", { create: true });
                 }}
               >
-                Sign in
+                Make an account
               </button>
             </div>
           </aside>

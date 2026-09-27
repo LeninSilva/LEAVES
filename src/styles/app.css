@@ -1352,3 +1352,110 @@
 .shared-entry .stamp {
   display: block;
 }
+
+/* ---- accounts ------------------------------------------------------------------ */
+
+.auth {
+  width: 100%;
+  max-width: 26rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.auth--loading {
+  min-height: calc(var(--target-large) * 5);
+}
+
+.auth__provider {
+  width: 100%;
+  gap: var(--space-1);
+}
+
+.auth__provider svg {
+  flex: none;
+}
+
+.auth__or {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--size-15);
+}
+
+.auth__or::before,
+.auth__or::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.auth__lead {
+  max-width: var(--measure);
+}
+
+.auth__password {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth__password .input {
+  padding-right: calc(var(--space-2) + 4.5em);
+}
+
+.auth__show {
+  position: absolute;
+  right: var(--space-0-5);
+  font-size: var(--size-15);
+}
+
+.auth__error {
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--color-rosehip);
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font-size: var(--size-15);
+}
+
+.auth__note {
+  padding: var(--space-1) var(--space-2);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-chip);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font-size: var(--size-15);
+}
+
+.auth__switch {
+  color: var(--color-text-muted);
+  font-size: var(--size-15);
+}
+
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: var(--size-15);
+  font-weight: var(--weight-ui-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.link-button:hover {
+  text-decoration-thickness: 2px;
+}
+
+.welcome__guest {
+  margin-top: calc(var(--space-1) * -1);
+}
