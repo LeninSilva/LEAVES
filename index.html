@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#eaf0e3" />
+    <meta name="description" content="A calm, simple journal. Write about your day and receive a small drawing and a thought to keep." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Leaves" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <title>Leaves</title>
+    <script>
+      // Paint the right theme before the app loads, so evenings never flash bright.
+      (function () {
+        try {
+          var s = JSON.parse(localStorage.getItem("leaves.appearance") || "{}");
+          var theme = s.theme || "automatic";
+          var warm = s.warmEvenings !== false;
+          var from = s.warmEveningsFrom || "20:00";
+          var to = s.warmEveningsTo || "06:00";
+          var m = function (t) { var p = t.split(":"); return +p[0] * 60 + +p[1]; };
+          var d = new Date();
+          var n = d.getHours() * 60 + d.getMinutes();
+          var a = m(from), b = m(to);
+          var evening = a < b ? n >= a && n < b : n >= a || n < b;
+          var dark = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
+          var resolved = theme === "lamplight" || (warm && evening) || (theme === "automatic" && dark) ? "lamplight" : "daylight";
+          var r = document.documentElement;
+          r.dataset.theme = resolved;
+          if (s.textSize) r.dataset.textSize = s.textSize;
+          if (s.writingFont) r.dataset.writingFont = s.writingFont;
+          r.dataset.reduceMotion = String(!!s.reduceMotion || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches));
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", resolved === "lamplight" ? "#1e2923" : "#eaf0e3");
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Leaves needs JavaScript to keep your entries on this device.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

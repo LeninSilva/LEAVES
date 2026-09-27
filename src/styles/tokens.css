@@ -1,0 +1,173 @@
+/*
+ * Leaves design tokens: the one source of truth for color, type, spacing,
+ * radius and motion. Components read these and never hard-code values.
+ */
+
+:root {
+  /* ---- Daylight (default) ---- */
+  --color-bg: #eaf0e3;            /* Leaf paper */
+  --color-raised: #f7faf2;        /* Petal, used sparingly */
+  --color-text: #2b3326;          /* Bark */
+  --color-text-muted: #5c6655;    /* Moss: secondary text, timestamps, placeholders, outlines */
+  --color-accent: #3d6645;        /* Fern: buttons, links, focus ring */
+  --color-on-accent: #f7faf2;     /* Petal text on Fern */
+  --color-hairline: #d6dfcc;
+  --color-control-outline: #5c6655;
+  /* Decoration and illustration only, never text */
+  --color-honey: #e8b54a;
+  --color-rosehip: #d98e8a;
+  --color-mist: #c5dbdf;
+  --color-grass: #7fa36f;
+  --color-grass-deep: #5f8a5a;
+  --color-bark-line: #4a3b2c;
+  --color-trunk: #6b5641;
+  --color-scrim: rgb(43 51 38 / 0.28);
+
+  /* Leaf color for each mood (tree, vine and drawn illustrations) */
+  --mood-calm: #86ad8f;
+  --mood-joyful: #e8b54a;
+  --mood-tender: #d98e8a;
+  --mood-grateful: #c2a24c;
+  --mood-hopeful: #8dbf6a;
+  --mood-curious: #6fa3a8;
+  --mood-wistful: #9db9be;
+  --mood-restless: #d9985f;
+  --mood-tired: #a5a384;
+  --mood-heavy: #5e7a66;
+  --mood-none: #7fa36f;
+
+  /* Paper grain opacity (2 to 3 percent) */
+  --grain-opacity: 0.028;
+
+  /* ---- Type ---- */
+  --font-words: "Literata", "Iowan Old Style", Georgia, serif;
+  --font-words-alt: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-ui: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --font-writing: var(--font-words);
+
+  /* The interface scale is 15, 17, 20, 24, 30 at default text size. rem keeps system text size. */
+  --text-scale: 1;
+  --size-15: calc(0.9375rem * var(--text-scale));
+  --size-17: calc(1.0625rem * var(--text-scale));
+  --size-20: calc(1.25rem * var(--text-scale));
+  --size-24: calc(1.5rem * var(--text-scale));
+  --size-30: calc(1.875rem * var(--text-scale));
+  --size-writing: var(--size-20);
+  --leading-writing: 1.65;
+  --leading-ui: 1.45;
+  --leading-tight: 1.25;
+  --weight-ui: 500;
+  --weight-ui-strong: 700;
+  --weight-title: 600;
+  --measure: 34em; /* about 60 to 70 characters of Literata at 20px */
+
+  /* ---- Space (8 point) ---- */
+  --space-0-5: 4px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-8: 64px;
+  --space-10: 80px;
+  --gutter: 24px;
+  --column: 640px;
+  --target: 44px;
+  --target-large: 52px;
+
+  /* ---- Radius follows hierarchy ---- */
+  --radius-chip: 8px;
+  --radius-button: 14px;
+  --radius-thumb: 14px;
+  --radius-photo: 24px;
+  --radius-round: 999px;
+
+  /* ---- Lines ---- */
+  --stroke-icon: 2px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* ---- Motion ---- */
+  --ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-quick: 200ms;
+  --duration-base: 300ms;
+  --duration-slow: 400ms;
+  --duration-breath: 4000ms;
+  --duration-leaf-fall: 4000ms;
+  --duration-unfurl: 1400ms;
+
+  /* ---- Layers ---- */
+  --z-bar: 10;
+  --z-overlay: 30;
+  --z-toast: 40;
+
+  --grass-height: 28px;
+  --keyboard-offset: 0px;
+
+  color-scheme: light;
+}
+
+/* ---- Lamplight ---- */
+
+:root[data-theme="lamplight"] {
+  --color-bg: #1e2923;            /* Night fern */
+  --color-raised: #26322b;
+  --color-text: #e9e4d3;          /* Moonlight */
+  --color-text-muted: #aeb5a5;    /* Lichen */
+  --color-accent: #9cc0a0;        /* Fern */
+  --color-on-accent: #1e2923;     /* Night fern text on Fern */
+  --color-hairline: #3a463f;
+  --color-control-outline: #aeb5a5;
+  --color-honey: #e0b05a;         /* Lamp honey */
+  --color-rosehip: #c98a84;       /* Dusk rose */
+  --color-mist: #3e545a;          /* Dusk blue */
+  --color-grass: #3f5a45;
+  --color-grass-deep: #344b3a;
+  --color-bark-line: #1a1611;
+  --color-trunk: #6a5a48;
+  --color-scrim: rgb(10 14 12 / 0.5);
+
+  --mood-calm: #6f927a;
+  --mood-joyful: #d6a954;
+  --mood-tender: #c98a84;
+  --mood-grateful: #b09450;
+  --mood-hopeful: #7fa663;
+  --mood-curious: #5f8f93;
+  --mood-wistful: #7f9ca1;
+  --mood-restless: #c48a58;
+  --mood-tired: #8e8c73;
+  --mood-heavy: #587262;
+  --mood-none: #6a8c63;
+
+  --grain-opacity: 0.03;
+  color-scheme: dark;
+}
+
+/* ---- Increased contrast: no grain, stronger outlines ---- */
+@media (prefers-contrast: more) {
+  :root {
+    --grain-opacity: 0;
+    --color-text-muted: var(--color-text);
+    --color-hairline: var(--color-control-outline);
+  }
+}
+:root[data-contrast="more"] {
+  --grain-opacity: 0;
+  --color-text-muted: var(--color-text);
+  --color-hairline: var(--color-control-outline);
+}
+
+/* ---- Text size ---- */
+:root[data-text-size="small"] { --text-scale: 0.94; }
+:root[data-text-size="large"] { --text-scale: 1.12; }
+:root[data-text-size="larger"] { --text-scale: 1.26; }
+
+/* ---- Writing font ---- */
+:root[data-writing-font="atkinson"] { --font-writing: var(--font-words-alt); }
+
+/* ---- Reduced motion: short fades only ---- */
+:root[data-reduce-motion="true"] {
+  --duration-leaf-fall: 600ms;
+  --duration-unfurl: 300ms;
+}
