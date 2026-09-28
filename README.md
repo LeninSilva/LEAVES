@@ -21,34 +21,34 @@ Supabase keeps each person's account and backup, with every account's pages kept
 
 Email and password sign-in is on by default. New people get an email to confirm their address before their first sign-in.
 
-### 2. Put the app online (Render)
+### 2. Put the app online
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LeninSilva/LEAVES)
+Leaves runs on **Vercel** (what leaves-pied.vercel.app uses) or on **Render**. Both are free to start.
 
-1. Click the button above, sign in to Render with GitHub, and allow it to see this repository.
-2. If it asks for a branch, choose the one with Leaves on it (`claude/leaves-journaling-app-bb1li5`, or `main` once it's merged).
-3. Fill in the values it asks for:
+The settings are the same on both:
 
 | Name | What to paste |
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase Project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon or publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role or secret key |
-| `ANTHROPIC_API_KEY` | Optional. A key from [console.anthropic.com](https://console.anthropic.com) turns on reflections, titles and opening thoughts. |
-| `IMAGE_PROVIDER` and `OPENAI_API_KEY` | Optional. Set `openai` and a key from [platform.openai.com](https://platform.openai.com) for AI illustrations. |
+| `ANTHROPIC_API_KEY` | Optional. A key from [console.anthropic.com](https://console.anthropic.com) turns on AI reflections, titles, opening thoughts and AI-chosen pictures. |
+| `IMAGE_PROVIDER` and `OPENAI_API_KEY` | Optional. Set `openai` and a key from [platform.openai.com](https://platform.openai.com) to use painted AI images instead of the drawn ones. |
 
-4. Click **Apply**. The first build takes a few minutes. Your address will look like `https://leaves-xxxx.onrender.com`.
+**On Vercel:** open your project, then **Settings**, then **Environment Variables**, add the values above, and **Redeploy** (from **Deployments**, open the latest one and choose **Redeploy**). `vercel.json` already tells Vercel how to build Leaves, sends every page address to the app (so reloading never shows "not found"), and runs the server part as a Vercel function in `api/`. The daily reminder needs an always-on server, so it only works on Render.
 
-Without the AI keys, every entry still gets a hand-drawn illustration and a quote from the starter library. When accounts are on, AI features only answer signed-in people, so a stranger who finds your address can't run up your AI bill. Guests who try Leaves without an account still get the drawings and the starter quotes.
+**On Render:** click the button, sign in with GitHub, choose the `main` branch, paste the values, and click **Apply**. The free plan sleeps after a quiet spell, so the first visit after a break can take about a minute.
 
-The free Render plan sleeps after a quiet spell, so the first visit after a break can take about a minute. A paid plan stays awake.
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LeninSilva/LEAVES)
+
+Without any AI keys, Leaves reads each entry on the device to choose its mood and its picture, and gives it a quote from the starter library of 57 voices. When accounts are on, AI features only answer signed-in people, so a stranger who finds your address can't run up your AI bill.
 
 ### 3. Tell Supabase your address
 
 In Supabase, open **Authentication**, then **URL Configuration**:
 
-- **Site URL:** your Render address, like `https://leaves-xxxx.onrender.com`
-- **Redirect URLs:** add `https://leaves-xxxx.onrender.com/**`
+- **Site URL:** your address, like `https://leaves-pied.vercel.app`
+- **Redirect URLs:** add the same address followed by `/**`, like `https://leaves-pied.vercel.app/**`
 
 Without this step, the links in confirmation and password reset emails won't open Leaves.
 
@@ -61,7 +61,7 @@ The Google and Apple buttons appear on their own once you turn them on in Supaba
 
 ### 5. Open it on your phone
 
-Open your Render address in your phone's browser and add it to your home screen.
+Open your address in your phone's browser and add it to your home screen.
 
 - **Android (Chrome):** tap the menu, then **Add to Home screen** or **Install app**.
 - **iPhone (Safari):** tap Share, then **Add to Home Screen**.
@@ -104,9 +104,9 @@ npm run build && npm start   # production: one server for the app and the API
 - **Sync:** `src/lib/sync.ts` pushes and pulls against Supabase: one row per entry and images in a private bucket, isolated by row-level security. Each entry is resolved last write wins.
 - **After Finish:** `src/lib/pipeline.ts` runs the reflection and then the illustration in the background. It survives leaving the screen, waits while offline, and falls back to the starter library and the drawn vignette.
 - **Server:** A Hono app (`server/`). It holds the AI keys, validates every model reply against a Zod schema plus rule checks (no recent or skipped voices, quotes under 40 words, no em dashes or exclamation points), retries once with the reason, and never logs entry text. Server-side fallbacks are on for Claude refusals (`fallbacks: "default"`).
-- **Drawings:** `src/illustration/drawn.ts` composes hand-drawn-style SVG scenes for all 12 motifs. The mood picks the colors, and the entry id seeds the variations. The tree (`src/components/Tree.tsx`) is a pure function of the leaves, so it looks the same on every visit.
+- **Drawings:** each entry gets a scene: a central image chosen as a metaphor for what the entry is about (two birds together, a forked path, a cairn of stones), how many there are and how they relate, a setting, weather, light and small accents (`shared/constants.ts`). Claude chooses it when AI is on; otherwise `src/illustration/understand.ts` reads the entry on the device. `src/illustration/art.ts` draws it as a vector picture in the house style, with the mood choosing the colors and the entry id seeding the details. Preview with `npx tsx scripts/preview-art.mts out.png`. The tree (`src/components/Tree.tsx`) is a pure function of the leaves, so it looks the same on every visit.
 - **Dates:** Times are stored in UTC with the IANA zone and formatted with `Intl.DateTimeFormat`. An entry that runs past midnight is filed under the day it began. Tests cover midnight, travel and DST.
-- **Offline:** A small service worker (`src/sw.js`, with the precache list injected at build) caches the app shell and fonts.
+- **Offline and updates:** a small service worker (`src/sw.js`, with the precache list injected at build) caches the app and fonts, keeps the previous release's files so an open page never breaks mid-update, and opens the app for any address. A page that still asks for a file from an old release reloads once into the new one.
 
 ## Privacy
 

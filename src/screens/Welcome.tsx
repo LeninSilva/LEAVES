@@ -2,10 +2,11 @@ import { useEffect, useRef } from "react";
 import { AuthPanel } from "../components/AuthPanel";
 import { BreathingLeaf } from "../components/BreathingLeaf";
 import { Grass } from "../components/Grass";
+import { LockIcon } from "../components/icons";
 import { useAuth } from "../lib/auth";
 import { saveMeta } from "../lib/db";
 import { prepareOpeningThought } from "../lib/pipeline";
-import { navigate } from "../lib/router";
+import { go, navigate } from "../lib/router";
 
 const LINE = "Write about your day. When you finish, you'll get a small drawing and a thought to keep.";
 
@@ -36,6 +37,10 @@ export function Welcome() {
           <BreathingLeaf />
         ) : askToSignIn ? (
           <>
+            <p className="welcome__private">
+              <LockIcon size={18} />
+              <span>Private by design. Only you can read what you write.</span>
+            </p>
             <AuthPanel next="/" />
             <button type="button" className="link-button welcome__guest" onClick={() => void begin()}>
               Try it first, without an account
@@ -46,6 +51,15 @@ export function Welcome() {
             Begin
           </button>
         )}
+        <nav className="welcome__footer" aria-label="About Leaves">
+          <button type="button" className="link-button" onClick={() => go("/about", { from: "/welcome" })}>
+            About
+          </button>
+          <span aria-hidden="true">·</span>
+          <button type="button" className="link-button" onClick={() => go("/privacy", { from: "/welcome" })}>
+            Privacy
+          </button>
+        </nav>
       </main>
       <Grass />
     </>

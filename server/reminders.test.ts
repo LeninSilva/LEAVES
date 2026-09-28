@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDue, localClock } from "./reminders";
+import { isDue, localClock } from "./reminders.js";
 
 describe("daily reminder", () => {
   const now = new Date("2026-09-27T01:05:00Z"); // 9:05 PM in New York

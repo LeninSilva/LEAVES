@@ -1,4 +1,4 @@
-import type { Mood, Motif, Season, TimeOfDay } from "../../shared/constants";
+import type { Mood, Motif, Season, TimeOfDay, ArtSpec } from "../../shared/constants";
 
 /** A reference to a blob in local storage, written as "idb:<key>". */
 export type BlobRef = string;
@@ -53,6 +53,8 @@ export interface Entry {
   season: Season | null;
   timeOfDay: TimeOfDay | null;
   scene: string | null;
+  /** How the drawing is composed: its central image, arrangement, setting and light. */
+  art?: ArtSpec | null;
   /** The model's description of the drawing it asked for, used as alt text. */
   illustrationAlt?: string | null;
   illustration: Illustration | null;

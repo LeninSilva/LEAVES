@@ -1,5 +1,5 @@
 import webpush from "web-push";
-import { supabaseAdmin } from "./supabaseAdmin";
+import { supabaseAdmin } from "./supabaseAdmin.js";
 
 /**
  * One gentle notification a day, at the time the person chose, in their zone.

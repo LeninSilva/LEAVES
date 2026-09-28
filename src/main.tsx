@@ -11,12 +11,18 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/app.css";
 import { App } from "./App";
+import { reloadForUpdate } from "./components/ErrorBoundary";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
   </StrictMode>,
 );
+
+// A file from an earlier release is gone: load the new release once.
+window.addEventListener("vite:preloadError", (event) => {
+  if (reloadForUpdate()) event.preventDefault();
+});
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {

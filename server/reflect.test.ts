@@ -20,6 +20,7 @@ const good = {
   season: "autumn",
   timeOfDay: "evening",
   scene: "A small boat on a gold river.",
+  art: { subject: "boat", arrangement: "alone", setting: "water", weather: "clear", light: "soft", accents: [], focus: "center" },
   illustrationAlt: "A small boat on a golden river.",
   photoAlt: null,
   quote: "Heaven is under our feet as well as over our heads.",

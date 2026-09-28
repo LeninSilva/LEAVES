@@ -169,3 +169,16 @@ a {
     border: 1px solid ButtonText !important;
   }
 }
+
+/* Every tap is a tap: no 300ms wait for a possible double-tap zoom. */
+button,
+a,
+label,
+summary {
+  touch-action: manipulation;
+}
+
+/* Headings that take focus so screen readers start there aren't controls: no ring. */
+[tabindex="-1"]:focus {
+  outline: none;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReflectionResultSchema, checkReflection, tidyReflection, type ReflectionResult } from "./schema";
+import { ReflectionResultSchema, checkReflection, tidyReflection, type ReflectionResult } from "./schema.js";
 
 const base: ReflectionResult = {
   title: "Gold on the river",
@@ -9,6 +9,7 @@ const base: ReflectionResult = {
   season: "autumn",
   timeOfDay: "evening",
   scene: "A small boat resting on a gold river at dusk.",
+  art: { subject: "boat", arrangement: "alone", setting: "water", weather: "clear", light: "glow", accents: ["birds in flight"], focus: "center" },
   illustrationAlt: "A small boat on a golden river.",
   photoAlt: null,
   quote: "Heaven is under our feet as well as over our heads.",

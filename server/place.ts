@@ -1,4 +1,4 @@
-import type { PlaceResponse } from "../shared/schema";
+import type { PlaceResponse } from "../shared/schema.js";
 
 /**
  * Turns rounded coordinates into a coarse place name (neighborhood or city)

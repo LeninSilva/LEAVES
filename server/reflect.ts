@@ -10,8 +10,8 @@ import {
   type OpeningThoughtRequest,
   type ReflectRequest,
   type ReflectionResult,
-} from "../shared/schema";
-import { OPENING_SYSTEM, REFLECTION_SYSTEM } from "./prompts";
+} from "../shared/schema.js";
+import { OPENING_SYSTEM, REFLECTION_SYSTEM } from "./prompts.js";
 
 /**
  * The one AI service module for text: typed requests and responses, schema

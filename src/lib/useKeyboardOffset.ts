@@ -11,9 +11,12 @@ export function useKeyboardOffset() {
     if (!vv) return;
     const root = document.documentElement;
     const update = () => {
-      const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      root.style.setProperty("--keyboard-offset", `${Math.round(covered)}px`);
-      root.dataset.keyboard = covered > 80 ? "open" : "closed";
+      const raw = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // Browser toolbars sliding in and out change the viewport by a few dozen
+      // pixels; only a real keyboard should move the bar, or taps land in the wrong place.
+      const covered = raw > 120 ? Math.round(raw) : 0;
+      root.style.setProperty("--keyboard-offset", `${covered}px`);
+      root.dataset.keyboard = covered ? "open" : "closed";
     };
     update();
     vv.addEventListener("resize", update);

@@ -1,9 +1,19 @@
 import { z } from "zod";
 
-import { MOODS, MOTIFS, SEASONS, TIMES_OF_DAY } from "./constants";
-import type { OpeningThought, OpeningThoughtRequest, ReflectRequest, ReflectionResult, IllustrateRequest } from "./constants";
+import { ACCENTS, ARRANGEMENTS, FOCUSES, LIGHTS, MOODS, MOTIFS, SEASONS, SETTINGS_, SUBJECTS, TIMES_OF_DAY, WEATHERS } from "./constants.js";
+import type { OpeningThought, OpeningThoughtRequest, ReflectRequest, ReflectionResult, IllustrateRequest } from "./constants.js";
 
-export * from "./constants";
+export * from "./constants.js";
+
+export const ArtSpecSchema = z.object({
+  subject: z.enum(SUBJECTS),
+  arrangement: z.enum(ARRANGEMENTS),
+  setting: z.enum(SETTINGS_),
+  weather: z.enum(WEATHERS),
+  light: z.enum(LIGHTS),
+  accents: z.array(z.enum(ACCENTS)).max(3),
+  focus: z.enum(FOCUSES),
+});
 
 /** What the reflection model must return. Nullable fields are empty when crisis is true. */
 export const ReflectionResultSchema = z.object({
@@ -14,6 +24,7 @@ export const ReflectionResultSchema = z.object({
   season: z.enum(SEASONS),
   timeOfDay: z.enum(TIMES_OF_DAY),
   scene: z.string().min(1).max(400),
+  art: ArtSpecSchema.nullable(),
   illustrationAlt: z.string().min(1).max(300),
   photoAlt: z.string().max(300).nullable(),
   quote: z.string().nullable(),

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Grass } from "../components/Grass";
+import { SteadyButton } from "../components/SteadyButton";
+import { showToast } from "../components/Toast";
 import { LockIcon, PageIcon, TreeIcon } from "../components/icons";
 import { NavLink, TopBar } from "../components/TopBar";
 import { PhotoField } from "../components/PhotoField";
@@ -36,6 +38,7 @@ export function Write({ draftId }: { draftId?: string }) {
   const [question, setQuestion] = useState<string>(QUESTIONS[0]);
   const [thought, setThought] = useState<OpeningThoughtLine | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const finishingRef = useRef(false);
   const entryRef = useRef<Entry | null>(null);
   const saveTimer = useRef<number | undefined>(undefined);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -112,17 +115,25 @@ export function Write({ draftId }: { draftId?: string }) {
 
   const finish = async () => {
     const e = entryRef.current;
-    if (!e || !hasContent(e) || finishing) return;
+    if (!e || !hasContent(e) || finishingRef.current) return;
+    finishingRef.current = true;
     setFinishing(true);
-    await flush();
-    const done = await finishDraft(e.id);
+    let done: Entry | undefined;
+    try {
+      await flush();
+      done = await finishDraft(e.id);
+    } catch {
+      showToast("Couldn't finish just now. Your words are saved. Try again.");
+    }
     if (!done) {
+      finishingRef.current = false;
       setFinishing(false);
       return;
     }
     // This page is finished: nothing more to autosave from it.
     window.clearTimeout(saveTimer.current);
     entryRef.current = null;
+    textRef.current?.blur();
     // One soft haptic tap where supported.
     try {
       navigator.vibrate?.(12);
@@ -228,20 +239,19 @@ export function Write({ draftId }: { draftId?: string }) {
               onChange={(name) => update(beginIfNeeded({ ...entryRef.current!, place: name ? { name } : null }), { immediate: true })}
             />
           ) : null}
-          <button
-            type="button"
+          <SteadyButton
             className={`button button--quiet button--icon ${entry.keptFromAI ? "is-on" : ""}`}
             aria-pressed={entry.keptFromAI}
-            onClick={() => update({ ...entryRef.current!, keptFromAI: !entryRef.current!.keptFromAI }, { immediate: true })}
+            onPress={() => update({ ...entryRef.current!, keptFromAI: !entryRef.current!.keptFromAI }, { immediate: true })}
           >
             <LockIcon size={20} />
             <span>Keep from AI</span>
-          </button>
+          </SteadyButton>
           <span className="writebar__spacer" />
           {canFinish ? (
-            <button type="button" className="button button--primary finish" onClick={finish} disabled={finishing}>
-              Finish
-            </button>
+            <SteadyButton className="button button--primary finish" onPress={() => void finish()} aria-disabled={finishing || undefined}>
+              {finishing ? "Finishing" : "Finish"}
+            </SteadyButton>
           ) : null}
         </div>
       </div>

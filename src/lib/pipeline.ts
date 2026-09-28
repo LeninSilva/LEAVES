@@ -9,7 +9,8 @@ import {
 } from "./ai";
 import { finishedEntries, getBlob, getEntry, getMeta, getSettings, putBlob, saveMeta, updateEntry, deleteBlob } from "./db";
 import { describeWhen, naturalMoment } from "./dates";
-import { drawIllustration, drawnAlt, motifFor, motifFromText } from "../illustration/drawn";
+import { drawIllustration, drawnAlt, motifForArt } from "../illustration/drawn";
+import { moodFromText, sceneFromText } from "../illustration/understand";
 import { localTitle } from "./entries";
 import { base64ToBlob, smallCopyBase64 } from "./photo";
 import type { Entry, Reflection } from "./types";
@@ -51,10 +52,19 @@ async function useStarter(id: string, keepTitle: boolean) {
   await updateEntry(id, (e) => ({
     ...e,
     title: keepTitle && e.title ? e.title : localTitle(e),
-    motif: e.motif ?? motifFromText(e.text) ?? motifFor(e.id),
+    // Read on the device: a mood for the tree and a picture for the page.
+    ...localPicture(e),
     reflection: settings.reflections ? reflection : null,
     steps: { ...e.steps, reflection: "done" },
   }));
+}
+
+/** Mood and scene from the entry's own words, worked out on the device. */
+function localPicture(e: Entry): Pick<Entry, "mood" | "art" | "motif"> {
+  const mood = e.mood ?? moodFromText(e.text);
+  const moment = naturalMoment(e.finishedAt ?? new Date().toISOString(), e.timeZone);
+  const art = e.art ?? sceneFromText(e.text, { seed: e.id, mood, timeOfDay: e.timeOfDay ?? moment.timeOfDay });
+  return { mood, art, motif: e.motif ?? motifForArt(art) };
 }
 
 async function applyAIReflection(id: string, r: ReflectionResult, onlyReflection: boolean) {
@@ -72,6 +82,7 @@ async function applyAIReflection(id: string, r: ReflectionResult, onlyReflection
           season: r.season,
           timeOfDay: r.timeOfDay,
           scene: r.scene,
+          art: r.art ?? e.art ?? null,
           photo: e.photo && !e.photo.altEdited && r.photoAlt ? { ...e.photo, alt: r.photoAlt } : e.photo,
         }),
     reflection: settings.reflections || r.crisis
@@ -140,20 +151,23 @@ async function runReflection(entry: Entry, onlyReflection: boolean): Promise<"do
 
 async function drawFallback(entry: Entry, state: "done" | "failed") {
   const moment = naturalMoment(entry.finishedAt ?? new Date().toISOString(), entry.timeZone);
-  // The first drawing is seeded by the entry; "Draw again" asks for a fresh variation.
-  const svg = drawIllustration({
-    seed: entry.illustration ? `${entry.id}:${Date.now()}` : entry.id,
-    motif: entry.motif ?? motifFromText(entry.text) ?? motifFor(entry.id),
-    mood: entry.mood,
-    season: entry.season ?? moment.season,
-    timeOfDay: entry.timeOfDay ?? moment.timeOfDay,
-  });
+  const timeOfDay = entry.timeOfDay ?? moment.timeOfDay;
+  // The first drawing is seeded by the entry; "Draw again" asks for a fresh one.
+  const again = !!entry.illustration;
+  const seed = again ? `${entry.id}:${Date.now()}` : entry.id;
+  const mood = entry.mood ?? moodFromText(entry.text);
+  // A scene from the AI keeps its meaning and varies its details; one read on the
+  // device may find a different picture for the same words.
+  const art = entry.art && !(again && !entry.scene) ? entry.art : sceneFromText(entry.text, { seed, mood, timeOfDay });
+  const svg = drawIllustration({ seed, art, mood, season: entry.season ?? moment.season, timeOfDay });
   const key = `ill-${entry.id}-${Date.now().toString(36)}`;
   const url = await putBlob(key, new Blob([svg], { type: "image/svg+xml" }));
   const old = entry.illustration;
   await updateEntry(entry.id, (e) => ({
     ...e,
-    illustration: { url, thumbUrl: url, alt: drawnAlt(e.motif), kind: "drawn" },
+    mood: e.mood ?? mood,
+    art,
+    illustration: { url, thumbUrl: url, alt: drawnAlt({ art, timeOfDay }), kind: "drawn" },
     steps: { ...e.steps, illustration: state },
   }));
   if (old) await removeIllustrationBlobs(old.url, old.thumbUrl);
@@ -195,7 +209,7 @@ async function runIllustration(entry: Entry): Promise<"done" | "waiting"> {
     const old = entry.illustration;
     await updateEntry(entry.id, (e) => ({
       ...e,
-      illustration: { url, thumbUrl, alt: e.illustrationAlt ?? drawnAlt(e.motif), kind: "generated" },
+      illustration: { url, thumbUrl, alt: e.illustrationAlt ?? drawnAlt({ art: e.art, motif: e.motif, timeOfDay: e.timeOfDay }), kind: "generated" },
       steps: { ...e.steps, illustration: "done" },
     }));
     if (old) await removeIllustrationBlobs(old.url, old.thumbUrl);

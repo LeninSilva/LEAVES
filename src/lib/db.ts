@@ -22,7 +22,16 @@ const dbName = (account: string | null) => (account ? `leaves-${account}` : GUES
 let dbPromise: Promise<IDBPDatabase<LeavesDB>> | null = null;
 
 function openNotebook(name: string) {
-  return openDB<LeavesDB>(name, 1, {
+  const opening: Promise<IDBPDatabase<LeavesDB>> = openDB<LeavesDB>(name, 1, {
+    // Another tab is removing this notebook (someone signed out there): let go
+    // at once, or every later attempt to open storage would wait forever.
+    blocking() {
+      void opening.then((d) => d.close());
+      if (name === dbName(activeAccount()) && typeof location !== "undefined") location.reload();
+    },
+    terminated() {
+      dbPromise = null;
+    },
     upgrade(d) {
       const entries = d.createObjectStore("entries", { keyPath: "id" });
       entries.createIndex("status", "status");
@@ -31,6 +40,7 @@ function openNotebook(name: string) {
       d.createObjectStore("tombstones", { keyPath: "id" });
     },
   });
+  return opening;
 }
 
 export function db(): Promise<IDBPDatabase<LeavesDB>> {

@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { STARTER_LIBRARY, pickStarter } from "./starter";
+import { STARTER_LIBRARY, pickStarter } from "./starter.js";
 
 describe("starter library", () => {
-  it("has exactly the 21 given lines, one marked as a paraphrase", () => {
-    expect(STARTER_LIBRARY).toHaveLength(21);
-    expect(STARTER_LIBRARY.filter((l) => l.isParaphrase).map((l) => l.author)).toEqual(["Søren Kierkegaard"]);
+  it("keeps the original 21 lines first, in order, so remembered positions still point to them", () => {
+    expect(STARTER_LIBRARY[0].author).toBe("Epictetus");
+    expect(STARTER_LIBRARY[20].author).toBe("Søren Kierkegaard");
+    expect(STARTER_LIBRARY.slice(0, 21).filter((l) => l.isParaphrase).map((l) => l.author)).toEqual(["Søren Kierkegaard"]);
+  });
+
+  it("ranges widely, with every line short, sourced and unique", () => {
+    expect(STARTER_LIBRARY.length).toBeGreaterThan(50);
+    expect(new Set(STARTER_LIBRARY.map((l) => l.quote)).size).toBe(STARTER_LIBRARY.length);
+    for (const line of STARTER_LIBRARY) {
+      expect(line.quote.split(/\s+/).length).toBeLessThan(40);
+      expect(line.source.length).toBeGreaterThan(0);
+      expect(line.quote).not.toMatch(/—/);
+    }
+    for (const voice of ["Ptahhotep", "Confucius", "Thiruvalluvar", "Laxmi Prasad Devkota", "Saadi", "Ibn Sina", "Denis Diderot"]) {
+      expect(STARTER_LIBRARY.some((l) => l.author === voice)).toBe(true);
+    }
   });
 
   it("never repeats a line until all have been used", () => {

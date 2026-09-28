@@ -215,6 +215,16 @@ export function SettingsScreen() {
           </button>
         </Group>
 
+        <Group title="About">
+          <p className="setting__hint">A private journal, made by philosophy students and alumni of SF State and UC Berkeley.</p>
+          <button type="button" className="button button--soft" onClick={() => go("/about")}>
+            About Leaves
+          </button>
+          <button type="button" className="button button--soft" onClick={() => go("/privacy")}>
+            Your privacy
+          </button>
+        </Group>
+
         <Group title="Account">
           <p className="setting__hint">
             {!cloudConfigured
@@ -257,14 +267,14 @@ export function HowAIScreen() {
           reflection doesn't repeat itself.
         </p>
         <p>
-          To make the drawing, only a one-sentence description of a nature scene is sent to an image service, never your words or
-          your photo.
+          The reflection also chooses a picture for your entry, and your drawing is made from it on your device. If this server uses
+          an image service instead, only a one-sentence description of a nature scene is sent to it, never your words or your photo.
         </p>
         <p>If you add a place, your rough location is used once to find a name, and only the name is kept.</p>
         <h2 className="section-title">What doesn't</h2>
         <p>
-          Entries you keep from AI are never sent to any AI service. They get a drawing made on your phone and a quote from a small
-          library of well-known lines.
+          Entries you keep from AI are never sent to any AI service. Your device reads them itself to choose a drawing, and they get
+          a quote from a library of lines gathered from around the world.
         </p>
         <p>
           Your other entries are never sent. The AI services we use don't train on what we send them. We don't keep or log your

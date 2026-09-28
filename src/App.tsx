@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { clearReloadFlag, ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastHost } from "./components/Toast";
 import { BreathingLeaf } from "./components/BreathingLeaf";
 import { mountAnnouncer } from "./lib/announce";
@@ -17,6 +18,8 @@ const ReflectionsScreen = lazy(() => import("./screens/ReflectionsScreen").then(
 const SettingsScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.SettingsScreen })));
 const HowAIScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.HowAIScreen })));
 const AccountScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.AccountScreen })));
+const AboutScreen = lazy(() => import("./screens/AboutScreen").then((m) => ({ default: m.AboutScreen })));
+const PrivacyScreen = lazy(() => import("./screens/AboutScreen").then((m) => ({ default: m.PrivacyScreen })));
 const ResetPasswordScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.ResetPasswordScreen })));
 const SharedEntryPage = lazy(() => import("./screens/SharedPages").then((m) => ({ default: m.SharedEntryPage })));
 const PublicPageView = lazy(() => import("./screens/SharedPages").then((m) => ({ default: m.PublicPageView })));
@@ -29,6 +32,8 @@ const TITLES: Record<string, string> = {
   "/settings/ai": "How AI is used",
   "/settings/account": "Account",
   "/reset-password": "New password",
+  "/about": "About",
+  "/privacy": "Your privacy",
   "/welcome": "Leaves",
 };
 
@@ -61,6 +66,7 @@ export function App() {
   const [settings, settingsReady] = useSettings();
   const [meta, metaReady] = useMeta();
   const welcomed = metaReady ? meta.welcomed : null;
+  const storageStuck = useStorageWatch(metaReady);
 
   // Theme, text size, font and motion. Warm evenings is re-checked each minute.
   useEffect(() => {
@@ -96,7 +102,7 @@ export function App() {
   // First launch shows one screen, then never again. Checked once, when the app opens.
   useEffect(() => {
     const here = location.pathname;
-    if (metaReady && !meta.welcomed && !isPublicPath(here) && here !== "/welcome" && here !== "/reset-password") {
+    if (metaReady && !meta.welcomed && !isPublicPath(here) && !["/welcome", "/reset-password", "/about", "/privacy"].includes(here)) {
       navigate("/welcome", { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,6 +112,7 @@ export function App() {
   let params: Record<string, string> | null;
   if ((params = match("/s/:token", path))) screen = <SharedEntryPage token={params.token} />;
   else if ((params = match("/p/:handle", path))) screen = <PublicPageView handle={params.handle} />;
+  else if (welcomed === null && storageStuck) screen = <StorageStuck />;
   else if (welcomed === null) screen = <main className="page page--center"><BreathingLeaf /></main>;
   else if (path === "/welcome") screen = <Welcome />;
   else if (path === "/") screen = <Write key="write" />;
@@ -118,6 +125,8 @@ export function App() {
   else if (path === "/settings/ai") screen = <HowAIScreen />;
   else if (path === "/settings/account") screen = <AccountScreen />;
   else if (path === "/reset-password") screen = <ResetPasswordScreen />;
+  else if (path === "/about") screen = <AboutScreen />;
+  else if (path === "/privacy") screen = <PrivacyScreen />;
   else
     screen = (
       <main className="page" id="main">
@@ -134,9 +143,36 @@ export function App() {
         Skip to content
       </a>
       <div className="screen" key={path.split("/")[1] || "write"}>
-        <Suspense fallback={<main className="page page--center" aria-busy="true" />}>{screen}</Suspense>
+        <ErrorBoundary key={path}>
+          <Suspense fallback={<main className="page page--center" aria-busy="true" />}>{screen}</Suspense>
+        </ErrorBoundary>
       </div>
       <ToastHost />
     </>
+  );
+}
+
+/** Storage almost always opens at once. If it hasn't after a while, say so and offer a way out. */
+function useStorageWatch(ready: boolean) {
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    if (ready) {
+      clearReloadFlag();
+      return;
+    }
+    const t = window.setTimeout(() => setStuck(true), 8000);
+    return () => window.clearTimeout(t);
+  }, [ready]);
+  return stuck && !ready;
+}
+
+function StorageStuck() {
+  return (
+    <main className="page page--center" id="main">
+      <p className="empty">Leaves is waiting for this device's storage. Close any other Leaves tabs, then open it again.</p>
+      <button type="button" className="button button--primary" onClick={() => location.reload()}>
+        Open again
+      </button>
+    </main>
   );
 }

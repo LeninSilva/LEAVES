@@ -17,12 +17,15 @@ function useLive<T>(topic: "entries" | "settings" | "meta" | "blobs", load: () =
   useEffect(() => {
     let alive = true;
     const run = () =>
-      load().then((v) => {
-        if (alive) {
-          setValue(v);
-          setReady(true);
-        }
-      });
+      load().then(
+        (v) => {
+          if (alive) {
+            setValue(v);
+            setReady(true);
+          }
+        },
+        (err) => console.warn("Storage read failed", (err as Error)?.message),
+      );
     run();
     const off = subscribe(topic, run);
     return () => {

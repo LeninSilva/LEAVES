@@ -1,6 +1,6 @@
 import sharp from "sharp";
-import type { IllustrateRequest, IllustrateResponse } from "../shared/schema";
-import { illustrationPrompt } from "./prompts";
+import type { IllustrateRequest, IllustrateResponse } from "../shared/schema.js";
+import { illustrationPrompt } from "./prompts.js";
 
 /**
  * Illustrations come from an image model on the server (OpenAI's gpt-image-1
