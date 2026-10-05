@@ -7,6 +7,7 @@ import {
   getMeta,
   getSettings,
   subscribe,
+  trashedEntries,
 } from "./db";
 import { fetchRemoteBlob } from "./sync";
 import { DEFAULT_META, DEFAULT_SETTINGS, type Entry, type Meta, type Settings } from "./types";
@@ -43,6 +44,10 @@ export function useEntries() {
 
 export function useDrafts() {
   return useLive<Entry[]>("entries", draftEntries, []);
+}
+
+export function useTrashed() {
+  return useLive<Entry[]>("entries", trashedEntries, []);
 }
 
 export function useEntry(id: string | null | undefined) {

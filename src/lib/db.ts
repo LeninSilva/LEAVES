@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { activeAccount } from "./account";
+import { blobKeysOf, normalizeEntry } from "./entryShape";
 import { DEFAULT_META, DEFAULT_SETTINGS, type Entry, type Meta, type Settings } from "./types";
 
 interface LeavesDB extends DBSchema {
@@ -14,6 +15,12 @@ export interface Tombstone {
   deletedAt: number;
   blobKeys: string[];
 }
+
+/** Deleted entries wait here this long before they are removed for good. */
+export const TRASH_DAYS = 30;
+const DAY = 86_400_000;
+/** A picture taken out of an entry is kept this long before its file is removed. */
+const BLOB_GRACE_DAYS = 7;
 
 // Each account has its own notebook on the device, so two people sharing a
 // phone or laptop never see each other's pages. "leaves" holds a guest's pages.
@@ -132,21 +139,29 @@ export function subscribe(topic: Topic, fn: () => void): () => void {
 // ---- entries --------------------------------------------------------------
 
 export async function getEntry(id: string): Promise<Entry | undefined> {
-  return (await db()).get("entries", id);
+  const stored = await (await db()).get("entries", id);
+  return stored ? normalizeEntry(stored) : undefined;
 }
 
+/** Every entry, including drafts and ones in Recently deleted. This is what the backup copies. */
 export async function allEntries(): Promise<Entry[]> {
-  return (await db()).getAll("entries");
+  return (await (await db()).getAll("entries")).map(normalizeEntry);
 }
 
 export async function finishedEntries(): Promise<Entry[]> {
   const list = await (await db()).getAllFromIndex("entries", "status", "finished");
-  return list.sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""));
+  return list
+    .map(normalizeEntry)
+    .filter((e) => !e.deletedAt)
+    .sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""));
 }
 
 export async function draftEntries(): Promise<Entry[]> {
   const list = await (await db()).getAllFromIndex("entries", "status", "draft");
-  return list.sort((a, b) => b.updatedAt - a.updatedAt);
+  return list
+    .map(normalizeEntry)
+    .filter((e) => !e.deletedAt)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 /** Writes an entry, stamping updatedAt so sync knows it changed. */
@@ -159,15 +174,15 @@ export async function putEntry(entry: Entry, opts: { silent?: boolean; fromSync?
 
 /**
  * Saves a draft, unless that entry has already been finished (a late autosave
- * must never turn a finished entry back into a draft).
+ * must never turn a finished entry back into a draft) or has been deleted.
  */
 export async function putDraft(entry: Entry): Promise<Entry> {
   const d = await db();
   const tx = d.transaction("entries", "readwrite");
   const stored = await tx.store.get(entry.id);
-  if (stored && stored.status === "finished") {
+  if (stored && (stored.status === "finished" || stored.deletedAt)) {
     await tx.done;
-    return stored;
+    return normalizeEntry(stored);
   }
   const value = { ...entry, status: "draft" as const, updatedAt: Date.now() };
   await tx.store.put(value);
@@ -186,11 +201,12 @@ export async function updateEntry(
 ): Promise<Entry | undefined> {
   const d = await db();
   const tx = d.transaction("entries", "readwrite");
-  const current = await tx.store.get(id);
-  if (!current) {
+  const raw = await tx.store.get(id);
+  if (!raw) {
     await tx.done;
     return undefined;
   }
+  const current = normalizeEntry(raw);
   const next = change(current);
   if (next && next !== current) {
     const stamped = { ...next, updatedAt: Date.now() };
@@ -203,50 +219,68 @@ export async function updateEntry(
   return current;
 }
 
-export interface RemovedEntry {
-  entry: Entry;
-  blobs: [string, Blob][];
+// ---- Recently deleted -----------------------------------------------------
+
+/** Deleted entries, most recently deleted first. */
+export async function trashedEntries(): Promise<Entry[]> {
+  return (await allEntries()).filter((e) => !!e.deletedAt).sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
 }
 
-/** Deletes an entry and its images, keeping a copy in memory so it can be undone. */
-export async function removeEntry(id: string): Promise<RemovedEntry | null> {
+/**
+ * Moves an entry to Recently deleted. Nothing is lost: its words and photos stay
+ * where they are, out of sight, and can be brought back for 30 days. Any link
+ * it was shared by is cleared here (the caller turns the link off in the cloud).
+ */
+export async function trashEntry(id: string): Promise<Entry | undefined> {
+  const trashed = await updateEntry(id, (e) =>
+    e.deletedAt ? e : { ...e, deletedAt: Date.now(), share: { linkToken: null, published: false } },
+  );
+  if ((await getMeta()).currentDraftId === id) await saveMeta({ currentDraftId: null });
+  return trashed;
+}
+
+export async function restoreFromTrash(id: string): Promise<Entry | undefined> {
+  return updateEntry(id, (e) => (e.deletedAt ? { ...e, deletedAt: null } : e));
+}
+
+/** Removes an entry and its pictures for good, and leaves a mark so the cloud copy goes too. */
+export async function purgeEntry(id: string) {
   const d = await db();
-  const entry = await d.get("entries", id);
-  if (!entry) return null;
-  const keys = blobKeysOf(entry);
-  const blobs: [string, Blob][] = [];
-  for (const key of keys) {
-    const b = await d.get("blobs", key);
-    if (b) blobs.push([key, b]);
-  }
+  const raw = await d.get("entries", id);
+  if (!raw) return;
+  const keys = blobKeysOf(normalizeEntry(raw));
   const tx = d.transaction(["entries", "blobs", "tombstones"], "readwrite");
   await tx.objectStore("entries").delete(id);
   for (const key of keys) await tx.objectStore("blobs").delete(key);
   await tx.objectStore("tombstones").put({ id, deletedAt: Date.now(), blobKeys: keys });
   await tx.done;
+  try {
+    localStorage.removeItem(`leaves.draft.${id}`);
+  } catch {
+    /* storage may be unavailable */
+  }
   emit("entries");
-  return { entry, blobs };
 }
 
-export async function restoreEntry(removed: RemovedEntry) {
-  const d = await db();
-  const tx = d.transaction(["entries", "blobs", "tombstones"], "readwrite");
-  for (const [key, blob] of removed.blobs) await tx.objectStore("blobs").put(blob, key);
-  await tx.objectStore("entries").put({ ...removed.entry, updatedAt: Date.now() });
-  await tx.objectStore("tombstones").delete(removed.entry.id);
-  await tx.done;
-  emit("entries");
-  emit("blobs");
+export async function emptyTrash() {
+  for (const e of await trashedEntries()) await purgeEntry(e.id);
+}
+
+/** Removes entries that have been in Recently deleted past the grace period. Returns how many. */
+export async function purgeExpiredTrash(now = Date.now()): Promise<number> {
+  const expired = (await trashedEntries()).filter((e) => (e.deletedAt ?? 0) <= now && now - (e.deletedAt ?? 0) > TRASH_DAYS * DAY);
+  for (const e of expired.slice(0, 50)) await purgeEntry(e.id);
+  return Math.min(expired.length, 50);
 }
 
 /** Removes an entry that was deleted on another device. No tombstone is needed. */
 export async function dropEntryFromSync(id: string) {
   const d = await db();
-  const entry = await d.get("entries", id);
-  if (!entry) return;
+  const raw = await d.get("entries", id);
+  if (!raw) return;
   const tx = d.transaction(["entries", "blobs"], "readwrite");
   await tx.objectStore("entries").delete(id);
-  for (const key of blobKeysOf(entry)) await tx.objectStore("blobs").delete(key);
+  for (const key of blobKeysOf(normalizeEntry(raw))) await tx.objectStore("blobs").delete(key);
   await tx.done;
   emit("entries");
 }
@@ -257,13 +291,6 @@ export async function tombstones() {
 
 export async function clearTombstone(id: string) {
   await (await db()).delete("tombstones", id);
-}
-
-export function blobKeysOf(entry: Entry | undefined): string[] {
-  if (!entry) return [];
-  return [entry.photo?.url, entry.photo?.thumbUrl, entry.illustration?.url, entry.illustration?.thumbUrl]
-    .filter((u): u is string => !!u && u.startsWith("idb:"))
-    .map((u) => u.slice(4));
 }
 
 // ---- blobs ----------------------------------------------------------------
@@ -290,6 +317,103 @@ export async function getBlob(ref: string): Promise<Blob | undefined> {
 export async function deleteBlob(ref: string) {
   const key = ref.startsWith("idb:") ? ref.slice(4) : ref;
   await (await db()).delete("blobs", key);
+}
+
+/**
+ * Pictures are never deleted the moment they are taken out of an entry: a crash
+ * between the two steps would leave an entry pointing at nothing, and a mis-tap
+ * could not be undone. They are queued, and removed after a grace period only if
+ * no entry (including ones in Recently deleted) uses them any more.
+ */
+interface PendingBlob {
+  key: string;
+  at: number;
+}
+const PENDING = "pendingBlobDeletes";
+const REMOTE_REMOVALS = "remoteBlobRemovals";
+
+export async function queueBlobDeletion(keys: string[], now = Date.now()) {
+  if (!keys.length) return;
+  const d = await db();
+  const tx = d.transaction("kv", "readwrite");
+  const list = ((await tx.store.get(PENDING)) as PendingBlob[] | undefined) ?? [];
+  const have = new Set(list.map((p) => p.key));
+  for (const key of keys) if (!have.has(key)) list.push({ key, at: now });
+  await tx.store.put(list, PENDING);
+  await tx.done;
+}
+
+/** Undo: a picture put back into an entry must not be removed. */
+export async function cancelBlobDeletion(keys: string[]) {
+  const d = await db();
+  const tx = d.transaction("kv", "readwrite");
+  const list = ((await tx.store.get(PENDING)) as PendingBlob[] | undefined) ?? [];
+  const drop = new Set(keys);
+  await tx.store.put(
+    list.filter((p) => !drop.has(p.key)),
+    PENDING,
+  );
+  await tx.done;
+}
+
+/** Removes queued pictures that are past the grace period and no longer used. Returns the keys removed. */
+export async function sweepBlobs(opts: { now?: number; graceMs?: number } = {}): Promise<string[]> {
+  const now = opts.now ?? Date.now();
+  const graceMs = opts.graceMs ?? BLOB_GRACE_DAYS * DAY;
+  const d = await db();
+  // One transaction for the check and the removal, so a picture put back by Undo can't slip between them.
+  const tx = d.transaction(["entries", "blobs", "kv"], "readwrite");
+  const kv = tx.objectStore("kv");
+  const pending = ((await kv.get(PENDING)) as PendingBlob[] | undefined) ?? [];
+  const due = pending.filter((p) => now - p.at >= graceMs);
+  if (!due.length) {
+    await tx.done;
+    return [];
+  }
+  const used = new Set((await tx.objectStore("entries").getAll()).flatMap((e) => blobKeysOf(normalizeEntry(e))));
+  const doomed = due.filter((p) => !used.has(p.key)).map((p) => p.key);
+  for (const key of doomed) await tx.objectStore("blobs").delete(key);
+  const dueKeys = new Set(due.map((p) => p.key));
+  await kv.put(
+    pending.filter((p) => !dueKeys.has(p.key)),
+    PENDING,
+  );
+  if (doomed.length) {
+    const earlier = ((await kv.get(REMOTE_REMOVALS)) as string[] | undefined) ?? [];
+    await kv.put([...new Set([...earlier, ...doomed])], REMOTE_REMOVALS);
+  }
+  await tx.done;
+  return doomed;
+}
+
+/** Cloud copies of pictures removed on this device, waiting to be removed from the backup. */
+export async function takeRemoteRemovals(): Promise<string[]> {
+  return ((await kvGet<string[]>(REMOTE_REMOVALS)) ?? []).slice();
+}
+
+export async function clearRemoteRemovals(done: string[]) {
+  const left = ((await kvGet<string[]>(REMOTE_REMOVALS)) ?? []).filter((k) => !done.includes(k));
+  await kvSet(REMOTE_REMOVALS, left);
+}
+
+/**
+ * Deleting an entry turns off any link it was shared by. When the device is
+ * offline that waits here, and happens as soon as it can.
+ */
+const REVOKE = "pendingShareRevocations";
+
+export async function queueShareRevocation(entryId: string) {
+  const list = (await kvGet<string[]>(REVOKE)) ?? [];
+  if (!list.includes(entryId)) await kvSet(REVOKE, [...list, entryId]);
+}
+
+export async function pendingShareRevocations(): Promise<string[]> {
+  return (await kvGet<string[]>(REVOKE)) ?? [];
+}
+
+export async function clearShareRevocations(done: string[]) {
+  const left = ((await kvGet<string[]>(REVOKE)) ?? []).filter((id) => !done.includes(id));
+  await kvSet(REVOKE, left);
 }
 
 // ---- settings and meta ----------------------------------------------------

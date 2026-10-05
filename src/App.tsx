@@ -3,6 +3,7 @@ import { clearReloadFlag, ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastHost } from "./components/Toast";
 import { BreathingLeaf } from "./components/BreathingLeaf";
 import { mountAnnouncer } from "./lib/announce";
+import { purgeExpiredTrash, sweepBlobs } from "./lib/db";
 import { resumePending } from "./lib/pipeline";
 import { match, navigate, usePath, useRouteState } from "./lib/router";
 import { useEntry, useMeta, useSettings } from "./lib/store";
@@ -18,6 +19,8 @@ const ReflectionsScreen = lazy(() => import("./screens/ReflectionsScreen").then(
 const SettingsScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.SettingsScreen })));
 const HowAIScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.HowAIScreen })));
 const AccountScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.AccountScreen })));
+const TrashScreen = lazy(() => import("./screens/TrashScreen").then((m) => ({ default: m.TrashScreen })));
+const DeletedEntry = lazy(() => import("./screens/TrashScreen").then((m) => ({ default: m.DeletedEntry })));
 const AboutScreen = lazy(() => import("./screens/AboutScreen").then((m) => ({ default: m.AboutScreen })));
 const PrivacyScreen = lazy(() => import("./screens/AboutScreen").then((m) => ({ default: m.PrivacyScreen })));
 const ResetPasswordScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.ResetPasswordScreen })));
@@ -31,6 +34,7 @@ const TITLES: Record<string, string> = {
   "/settings": "Settings",
   "/settings/ai": "How AI is used",
   "/settings/account": "Account",
+  "/settings/trash": "Recently deleted",
   "/reset-password": "New password",
   "/about": "About",
   "/privacy": "Your privacy",
@@ -51,6 +55,7 @@ function EntryRoute({ id, edit }: { id: string; edit?: boolean }) {
       </main>
     );
   }
+  if (entry.deletedAt) return <DeletedEntry entry={entry} />;
   if (entry.status === "draft") return <Write draftId={entry.id} />;
   if (edit) return <EditEntry entry={entry} />;
   return <EntryScreen entry={entry} justFinished={!!state?.justFinished} />;
@@ -90,9 +95,17 @@ export function App() {
     if (isPublicPath(location.pathname)) return;
     void resumePending();
     void startAccount();
+    // Housekeeping, never urgent: remove what has been in Recently deleted past its 30 days, and photos taken out long ago.
+    const tidy = window.setTimeout(() => {
+      void purgeExpiredTrash().catch(() => undefined);
+      void sweepBlobs().catch(() => undefined);
+    }, 8000);
     const online = () => void resumePending();
     window.addEventListener("online", online);
-    return () => window.removeEventListener("online", online);
+    return () => {
+      window.clearTimeout(tidy);
+      window.removeEventListener("online", online);
+    };
   }, []);
 
   useEffect(() => {
@@ -124,6 +137,7 @@ export function App() {
   else if (path === "/settings") screen = <SettingsScreen />;
   else if (path === "/settings/ai") screen = <HowAIScreen />;
   else if (path === "/settings/account") screen = <AccountScreen />;
+  else if (path === "/settings/trash") screen = <TrashScreen />;
   else if (path === "/reset-password") screen = <ResetPasswordScreen />;
   else if (path === "/about") screen = <AboutScreen />;
   else if (path === "/privacy") screen = <PrivacyScreen />;

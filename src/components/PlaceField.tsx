@@ -2,6 +2,7 @@ import { useState } from "react";
 import { lookUpPlace } from "../lib/place";
 import { Dialog } from "./Dialog";
 import { PinIcon } from "./icons";
+import { SteadyButton } from "./SteadyButton";
 
 /**
  * "Add place". The first tap asks the browser for permission; the coarse name
@@ -33,10 +34,14 @@ export function PlaceField({ place, onChange }: { place: string | null; onChange
 
   return (
     <>
-      <button type="button" className="button button--quiet button--icon" onClick={start} aria-label={place ? `Place: ${place}. Change place` : undefined}>
+      <SteadyButton
+        className="button button--quiet button--icon"
+        onPress={() => void start()}
+        aria-label={place ? `Place: ${place}. Change place` : undefined}
+      >
         <PinIcon size={20} />
         <span className="place-label">{place ?? "Add place"}</span>
-      </button>
+      </SteadyButton>
       <Dialog open={open} onClose={() => setOpen(false)} title="Place">
         <form
           className="stack"

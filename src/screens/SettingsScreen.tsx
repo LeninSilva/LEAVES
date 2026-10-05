@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BackIcon } from "../components/icons";
 import { Choice, NameList, Toggle } from "../components/Controls";
 import { Confirm } from "../components/Dialog";
+import { InstallCard } from "../components/InstallCard";
 import { NavLink, TopBar } from "../components/TopBar";
 import { showToast } from "../components/Toast";
 import { cloudConfigured, useAuth } from "../lib/auth";
@@ -10,7 +11,8 @@ import { saveSettings, wipeLocal } from "../lib/db";
 import { disableReminder, enableReminder } from "../lib/reminder";
 import { go, navigate } from "../lib/router";
 import { downloadBlob, shareFile } from "../lib/share";
-import { useSettings } from "../lib/store";
+import { formatBytes, protectStorage, useStorageReport } from "../lib/storage";
+import { useMeta, useSettings } from "../lib/store";
 import { deleteRemoteEverything } from "../lib/sync";
 import type { PlaceMode, TextSize, ThemeSetting, WritingFont } from "../lib/types";
 
@@ -44,26 +46,66 @@ export function SettingsScreen() {
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [reminderNote, setReminderNote] = useState<string | null>(null);
+  const [safetyNote, setSafetyNote] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  const [meta] = useMeta();
+  const report = useStorageReport(refresh);
   const set = (patch: Parameters<typeof saveSettings>[0]) => void saveSettings(patch);
 
   if (!ready) return <main className="page" aria-busy="true" />;
 
   const exportAll = async () => {
     setBusy("export");
+    setSafetyNote(null);
     try {
-      const { buildExport } = await import("../lib/exportZip");
-      const blob = await buildExport();
-      const name = `leaves-${new Date().toISOString().slice(0, 10)}.zip`;
-      const res = await shareFile(blob, name, "Leaves export").catch(() => {
+      const { buildBackup, backupFileName, markBackedUp } = await import("../lib/backup");
+      const { blob } = await buildBackup();
+      const name = backupFileName();
+      const res = await shareFile(blob, name, "Leaves backup").catch(() => {
         downloadBlob(blob, name);
         return "downloaded" as const;
       });
-      if (res === "downloaded") showToast("Your export is in your downloads.");
+      if (res !== "cancelled") {
+        await markBackedUp();
+        setRefresh((n) => n + 1);
+      }
+      if (res === "downloaded") showToast("Your backup is in your downloads.");
     } catch {
-      showToast("Couldn't make the export. Try again.");
+      showToast("Couldn't make the backup. Try again.");
     } finally {
       setBusy(null);
     }
+  };
+
+  const restore = async (file: File) => {
+    setBusy("restore");
+    setSafetyNote(null);
+    try {
+      const { restoreBackup, BackupError } = await import("../lib/backup").then((m) => ({ restoreBackup: m.restoreBackup, BackupError: m.BackupError }));
+      try {
+        const r = await restoreBackup(file);
+        setSafetyNote(
+          r.restored === 0
+            ? "Everything in that backup is already here."
+            : `Restored ${r.restored} ${r.restored === 1 ? "entry" : "entries"} and ${r.photos} ${r.photos === 1 ? "photo" : "photos"}.${r.kept ? ` ${r.kept} already here were left as they are.` : ""}`,
+        );
+        setRefresh((n) => n + 1);
+      } catch (err) {
+        setSafetyNote(err instanceof BackupError ? err.message : "Couldn't restore that backup. Try again.");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const protect = async () => {
+    const ok = await protectStorage();
+    setRefresh((n) => n + 1);
+    setSafetyNote(
+      ok
+        ? "Done. Your device will keep your pages."
+        : "Your browser didn't agree to that. Installing Leaves on your home screen usually fixes it, and a backup file keeps your pages safe either way.",
+    );
   };
 
   const wipe = async () => {
@@ -202,11 +244,74 @@ export function SettingsScreen() {
           ) : null}
         </Group>
 
-        <Group title="My data">
+        <Group title="Keep your pages safe">
+          {report ? (
+            <div className="safety" role="status">
+              <p>
+                On this device: {report.entries} {report.entries === 1 ? "entry" : "entries"}, {report.photos} {report.photos === 1 ? "photo" : "photos"}
+                {report.drafts ? `, ${report.drafts} unfinished` : ""}.
+                {report.usedBytes != null ? ` Using ${formatBytes(report.usedBytes)}${report.availableBytes != null ? `, with ${formatBytes(report.availableBytes)} free` : ""}.` : ""}
+              </p>
+              <p className={report.protectedStorage ? "safety__ok" : undefined}>
+                {report.protectedStorage === true
+                  ? "Protected: this device will keep your pages."
+                  : report.protectedStorage === false
+                    ? "Not protected yet: if this device runs very low on space, the browser could clear your pages."
+                    : "This browser can't say whether your pages are protected."}
+              </p>
+              <p>
+                {auth.signedIn
+                  ? "Backed up to your account, so you can read them on any device."
+                  : cloudConfigured
+                    ? "Not backed up online. Make a free account, or save a backup file below."
+                    : "Kept on this device only. Save a backup file now and then."}
+              </p>
+              <p>
+                Last backup file: {meta.lastBackupAt ? new Date(meta.lastBackupAt).toLocaleDateString(undefined, { dateStyle: "medium" }) : "never"}.
+              </p>
+            </div>
+          ) : null}
+          {report && report.protectedStorage === false ? (
+            <button type="button" className="button button--soft" onClick={() => void protect()}>
+              Protect my pages
+            </button>
+          ) : null}
           <button type="button" className="button button--soft" onClick={exportAll} disabled={!!busy} aria-busy={busy === "export"}>
-            {busy === "export" ? "Making your export" : "Export everything"}
+            {busy === "export" ? "Making your backup" : "Back up everything"}
           </button>
-          <p className="setting__hint">A ZIP with one Markdown file per entry, plus all photos and drawings.</p>
+          <p className="setting__hint">
+            One ZIP with every entry as readable text, every photo with its caption, your drawings, and a copy Leaves can restore from. Unfinished pages and
+            recently deleted ones are included.
+          </p>
+          <label className="button button--soft" aria-busy={busy === "restore"}>
+            <input
+              type="file"
+              accept=".zip,application/zip"
+              className="visually-hidden"
+              disabled={!!busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void restore(file);
+              }}
+            />
+            <span>{busy === "restore" ? "Restoring" : "Restore from a backup"}</span>
+          </label>
+          <button type="button" className="button button--soft" onClick={() => go("/settings/trash")}>
+            {report && report.deleted ? `Recently deleted (${report.deleted})` : "Recently deleted"}
+          </button>
+          {safetyNote ? (
+            <p className="field-note" role="status">
+              {safetyNote}
+            </p>
+          ) : null}
+        </Group>
+
+        <Group title="Install">
+          <InstallCard />
+        </Group>
+
+        <Group title="My data">
           <button type="button" className="button button--soft" onClick={() => go("/settings/ai")}>
             How AI is used
           </button>

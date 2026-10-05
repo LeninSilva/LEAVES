@@ -1,6 +1,8 @@
 import {
   allEntries,
-  blobKeysOf,
+  clearRemoteRemovals,
+  clearShareRevocations,
+  pendingShareRevocations,
   clearTombstone,
   db,
   dropEntryFromSync,
@@ -14,10 +16,13 @@ import {
   saveMeta,
   saveSettings,
   subscribe,
+  sweepBlobs,
+  takeRemoteRemovals,
   tombstones,
 } from "./db";
 import { activeAccount } from "./account";
 import { currentUser, isAccount, supabase } from "./auth";
+import { blobKeysOf, normalizeEntry } from "./entryShape";
 import type { Entry, Settings } from "./types";
 
 /**
@@ -51,6 +56,23 @@ async function markSynced(id: string, updatedAt: number) {
   const current = await tx.store.get(id);
   if (current && current.updatedAt === updatedAt) await tx.store.put({ ...current, syncedAt: updatedAt });
   await tx.done;
+}
+
+/** Links for entries that were deleted, turned off as soon as the device can reach the cloud. */
+async function revokeShares() {
+  const ids = await pendingShareRevocations();
+  if (!ids.length) return;
+  const { removeSharesFor } = await import("./share");
+  const done: string[] = [];
+  for (const id of ids) {
+    try {
+      await removeSharesFor(id);
+      done.push(id);
+    } catch {
+      /* try again on the next sync */
+    }
+  }
+  if (done.length) await clearShareRevocations(done);
 }
 
 async function push(uid: string) {
@@ -96,6 +118,18 @@ async function push(uid: string) {
     await clearTombstone(t.id);
   }
 
+  // Pictures taken out of entries long ago are removed from the backup too.
+  await sweepBlobs();
+  const removed = await takeRemoteRemovals();
+  if (removed.length) {
+    const { error } = await sb.storage.from(BUCKET).remove(removed.map((k) => `${uid}/${k}`));
+    if (!error) {
+      removed.forEach((k) => uploaded.delete(k));
+      await kvSet(UPLOADED_KEY, [...uploaded]);
+      await clearRemoteRemovals(removed);
+    }
+  }
+
   const settings = await getSettings();
   const settingsSyncedAt = (await kvGet<number>("settingsSyncedAt")) ?? 0;
   if (settings.updatedAt > settingsSyncedAt) {
@@ -132,7 +166,7 @@ async function pull() {
       continue;
     }
     if (!local || remoteUpdated > local.updatedAt) {
-      const incoming = row.data as Entry;
+      const incoming = normalizeEntry(row.data as Entry);
       await d.put("entries", { ...incoming, updatedAt: remoteUpdated, syncedAt: remoteUpdated });
       // Images from the cloud are already uploaded.
       const uploaded = await uploadedSet();
@@ -167,6 +201,7 @@ export async function syncNow(): Promise<void> {
   if (!isAccount(user) || user.id !== activeAccount()) return;
   running = true;
   try {
+    await revokeShares();
     await pull();
     await push(user.id);
   } catch (err) {

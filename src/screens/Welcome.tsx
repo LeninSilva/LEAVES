@@ -5,13 +5,16 @@ import { Grass } from "../components/Grass";
 import { LockIcon } from "../components/icons";
 import { useAuth } from "../lib/auth";
 import { saveMeta } from "../lib/db";
-import { prepareOpeningThought } from "../lib/pipeline";
 import { go, navigate } from "../lib/router";
 
 const LINE = "Write about your day. When you finish, you'll get a small drawing and a thought to keep.";
 
 async function begin() {
-  await saveMeta({ welcomed: true });
+  try {
+    await saveMeta({ welcomed: true });
+  } catch {
+    // Storage may be unavailable right now. Open the page anyway; it says so if it can't save.
+  }
   navigate("/", { replace: true });
 }
 
@@ -21,9 +24,6 @@ export function Welcome() {
   const button = useRef<HTMLButtonElement>(null);
   const askToSignIn = auth.configured && auth.ready && !auth.signedIn;
 
-  useEffect(() => {
-    void prepareOpeningThought();
-  }, []);
   useEffect(() => {
     if (auth.ready && !askToSignIn) button.current?.focus();
   }, [auth.ready, askToSignIn]);

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { EntryPhotos } from "../components/EntryPhotos";
 import { BackIcon, MoreIcon, ShareIcon } from "../components/icons";
 import { Illustration } from "../components/Illustration";
 import { LeafFall } from "../components/LeafFall";
@@ -11,10 +12,11 @@ import { showToast } from "../components/Toast";
 import { NavLink, TopBar } from "../components/TopBar";
 import { announce } from "../lib/announce";
 import { cloudConfigured, useAuth } from "../lib/auth";
-import { removeEntry, restoreEntry, saveMeta } from "../lib/db";
+import { restoreFromTrash, saveMeta } from "../lib/db";
 import { drawAgain, newReflection } from "../lib/pipeline";
 import { go, navigate } from "../lib/router";
-import { useBlobUrl, useMeta, useOnline } from "../lib/store";
+import { useMeta, useOnline } from "../lib/store";
+import { deleteEntry } from "../lib/trash";
 import type { Entry } from "../lib/types";
 
 const ShareDialog = lazy(() => import("../components/ShareDialog").then((m) => ({ default: m.ShareDialog })));
@@ -25,7 +27,6 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
   const [sharing, setSharing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const online = useOnline();
-  const photoUrl = useBlobUrl(entry.photo?.url);
   const [meta] = useMeta();
   const auth = useAuth();
   const reflectionWasPending = useRef(entry.steps.reflection !== "done");
@@ -52,9 +53,9 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
 
   const onDelete = async () => {
     setConfirmDelete(false);
-    const removed = await removeEntry(entry.id);
+    await deleteEntry(entry);
     navigate("/entries", { replace: true, state: { fromApp: true } });
-    if (removed) showToast("Entry deleted.", { label: "Undo", run: () => void restoreEntry(removed) }, 7000);
+    showToast("Moved to Recently deleted.", { label: "Undo", run: () => void restoreFromTrash(entry.id) }, 8000);
   };
 
   const showNudge = celebrate && cloudConfigured && auth.ready && !auth.signedIn && !meta.signInNudgeShown;
@@ -111,7 +112,7 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
             </p>
           ) : null}
           <div className="settle__4">
-            {entry.photo && photoUrl ? <img className="entry__photo" src={photoUrl} alt={entry.photo.alt || "Your photo"} /> : null}
+            <EntryPhotos photos={entry.photos} />
             {entry.text ? (
               <div className="entry__text">
                 {entry.text.split(/\n{2,}/).map((para, i) => (
@@ -174,7 +175,7 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
       <Confirm
         open={confirmDelete}
         title="Delete this entry?"
-        body="It will be removed from this device and your backup."
+        body="It moves to Recently deleted, where you can bring it back for 30 days. Any link you shared stops working now."
         confirmLabel="Delete entry"
         danger
         onConfirm={onDelete}

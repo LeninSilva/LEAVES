@@ -1,18 +1,14 @@
 import { pickStarter } from "../../shared/starter";
+import type { Theme } from "../../shared/voices";
 import type { ReflectionResult } from "../../shared/constants";
-import {
-  OfflineError,
-  requestIllustration,
-  requestOpeningThought,
-  requestReflection,
-  aiConfig,
-} from "./ai";
+import { OfflineError, requestIllustration, requestReflection, aiConfig } from "./ai";
 import { finishedEntries, getBlob, getEntry, getMeta, getSettings, putBlob, saveMeta, updateEntry, deleteBlob } from "./db";
 import { describeWhen, naturalMoment } from "./dates";
 import { drawIllustration, drawnAlt, motifForArt } from "../illustration/drawn";
 import { moodFromText, sceneFromText } from "../illustration/understand";
-import { localTitle } from "./entries";
+import { localTitle, wordsOf } from "./entries";
 import { base64ToBlob, smallCopyBase64 } from "./photo";
+import { themesFromText } from "./themes";
 import type { Entry, Reflection } from "./types";
 
 /**
@@ -23,8 +19,12 @@ import type { Entry, Reflection } from "./types";
 
 const inFlight = new Set<string>();
 
-function starterReflection(used: number[], allowReligious: boolean, skippedVoices: string[]) {
-  const pick = pickStarter({ used, allowReligious, skippedVoices });
+function starterReflection(
+  used: number[],
+  settings: { allowReligious: boolean; skippedVoices: string[]; lovedVoices: string[] },
+  themes: Theme[],
+) {
+  const pick = pickStarter({ used, allowReligious: settings.allowReligious, skippedVoices: settings.skippedVoices, lovedVoices: settings.lovedVoices, themes });
   const r: Reflection = {
     quote: pick.line.quote,
     author: pick.line.author,
@@ -46,7 +46,8 @@ async function rememberVoice(author: string | null) {
 
 async function useStarter(id: string, keepTitle: boolean) {
   const [settings, meta] = await Promise.all([getSettings(), getMeta()]);
-  const { reflection, used } = starterReflection(meta.starterUsed, settings.allowReligious, settings.skippedVoices);
+  const entry = await getEntry(id);
+  const { reflection, used } = starterReflection(meta.starterUsed, settings, entry ? themesFromText(wordsOf(entry)) : []);
   await saveMeta({ starterUsed: used });
   await rememberVoice(reflection.author);
   await updateEntry(id, (e) => ({
@@ -61,9 +62,9 @@ async function useStarter(id: string, keepTitle: boolean) {
 
 /** Mood and scene from the entry's own words, worked out on the device. */
 function localPicture(e: Entry): Pick<Entry, "mood" | "art" | "motif"> {
-  const mood = e.mood ?? moodFromText(e.text);
+  const mood = e.mood ?? moodFromText(wordsOf(e));
   const moment = naturalMoment(e.finishedAt ?? new Date().toISOString(), e.timeZone);
-  const art = e.art ?? sceneFromText(e.text, { seed: e.id, mood, timeOfDay: e.timeOfDay ?? moment.timeOfDay });
+  const art = e.art ?? sceneFromText(wordsOf(e), { seed: e.id, mood, timeOfDay: e.timeOfDay ?? moment.timeOfDay });
   return { mood, art, motif: e.motif ?? motifForArt(art) };
 }
 
@@ -83,7 +84,8 @@ async function applyAIReflection(id: string, r: ReflectionResult, onlyReflection
           timeOfDay: r.timeOfDay,
           scene: r.scene,
           art: r.art ?? e.art ?? null,
-          photo: e.photo && !e.photo.altEdited && r.photoAlt ? { ...e.photo, alt: r.photoAlt } : e.photo,
+          // The model saw the first photo, so its suggested description belongs to that one.
+          photos: e.photos.map((p, i) => (i === 0 && !p.altEdited && r.photoAlt ? { ...p, alt: r.photoAlt } : p)),
         }),
     reflection: settings.reflections || r.crisis
       ? {
@@ -122,13 +124,14 @@ async function runReflection(entry: Entry, onlyReflection: boolean): Promise<"do
   await updateEntry(entry.id, (e) => ({ ...e, steps: { ...e.steps, reflection: "working" } }));
   const meta = await getMeta();
   let photo: string | null = null;
-  if (entry.photo) {
-    const blob = await getBlob(entry.photo.url);
+  const first = entry.photos[0];
+  if (first) {
+    const blob = await getBlob(first.url);
     if (blob) photo = await smallCopyBase64(blob).catch(() => null);
   }
   try {
     const result = await requestReflection({
-      text: entry.text,
+      text: wordsOf(entry),
       photo,
       when: describeWhen(entry.finishedAt ?? new Date().toISOString(), entry.timeZone),
       recentVoices: meta.recentVoices.slice(0, 20),
@@ -155,10 +158,10 @@ async function drawFallback(entry: Entry, state: "done" | "failed") {
   // The first drawing is seeded by the entry; "Draw again" asks for a fresh one.
   const again = !!entry.illustration;
   const seed = again ? `${entry.id}:${Date.now()}` : entry.id;
-  const mood = entry.mood ?? moodFromText(entry.text);
+  const mood = entry.mood ?? moodFromText(wordsOf(entry));
   // A scene from the AI keeps its meaning and varies its details; one read on the
   // device may find a different picture for the same words.
-  const art = entry.art && !(again && !entry.scene) ? entry.art : sceneFromText(entry.text, { seed, mood, timeOfDay });
+  const art = entry.art && !(again && !entry.scene) ? entry.art : sceneFromText(wordsOf(entry), { seed, mood, timeOfDay });
   const svg = drawIllustration({ seed, art, mood, season: entry.season ?? moment.season, timeOfDay });
   const key = `ill-${entry.id}-${Date.now().toString(36)}`;
   const url = await putBlob(key, new Blob([svg], { type: "image/svg+xml" }));
@@ -264,48 +267,4 @@ export async function resumePending() {
     const owed = (s: string) => s === "pending" || s === "working";
     if (owed(e.steps.reflection) || owed(e.steps.illustration)) await processEntry(e.id);
   }
-}
-
-// ---- opening thought --------------------------------------------------------
-
-/** Quietly prepares the next opening thought so it is ready for the next page. */
-export async function prepareOpeningThought() {
-  const [settings, meta] = await Promise.all([getSettings(), getMeta()]);
-  if (!settings.openingThought) return;
-  try {
-    const config = await aiConfig();
-    if (!config?.reflections) return;
-    const thought = await requestOpeningThought({
-      recentVoices: [...meta.recentOpeningVoices, ...meta.recentVoices].slice(0, 20),
-      lovedVoices: settings.lovedVoices,
-      skippedVoices: settings.skippedVoices,
-      allowReligious: settings.allowReligious,
-    });
-    await saveMeta({
-      nextOpeningThought: thought,
-      recentOpeningVoices: [thought.author, ...meta.recentOpeningVoices].slice(0, 20),
-    });
-  } catch {
-    /* the starter library covers it */
-  }
-}
-
-/** The thought for a new page: the prepared one, or the next starter line. */
-export async function takeOpeningThought() {
-  const [settings, meta] = await Promise.all([getSettings(), getMeta()]);
-  if (meta.nextOpeningThought) return meta.nextOpeningThought;
-  const pick = pickStarter({
-    used: meta.starterUsed,
-    allowReligious: settings.allowReligious,
-    skippedVoices: settings.skippedVoices,
-  });
-  const line = { quote: pick.line.quote, author: pick.line.author, source: pick.line.source, isParaphrase: pick.line.isParaphrase };
-  await saveMeta({ starterUsed: pick.used, nextOpeningThought: line });
-  return line;
-}
-
-/** Called after Finish: this thought has been used; make the next one. */
-export async function retireOpeningThought() {
-  await saveMeta({ nextOpeningThought: null });
-  void prepareOpeningThought();
 }

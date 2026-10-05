@@ -19,7 +19,15 @@ export function fold(s: string): string {
 export function matches(e: Entry, q: string): boolean {
   if (!q) return true;
   const hay = fold(
-    [e.text, e.title ?? "", e.place?.name ?? "", e.reflection?.author ?? "", e.reflection?.source ?? "", ...e.themes].join("\n"),
+    [
+      e.text,
+      e.title ?? "",
+      e.place?.name ?? "",
+      e.reflection?.author ?? "",
+      e.reflection?.source ?? "",
+      ...e.photos.map((p) => p.caption),
+      ...e.themes,
+    ].join("\n"),
   );
   return fold(q)
     .split(/\s+/)
@@ -106,7 +114,7 @@ export function EntriesScreen() {
   }, [results]);
   const memory = useMemo(() => onThisDay(entries), [entries]);
   const seen = useCallback((count: number) => void saveMeta({ seenLeafCount: count }), []);
-  const unfinished = drafts.filter((d) => d.text.trim() || d.photo);
+  const unfinished = drafts.filter((d) => d.text.trim() || d.photos.length > 0);
 
   return (
     <>
@@ -168,13 +176,13 @@ export function EntriesScreen() {
           <div className="search" role="search">
             <SearchIcon size={20} className="search__icon" />
             <label htmlFor="search" className="visually-hidden">
-              Search words, titles, places and authors
+              Search words, captions, titles, places and authors
             </label>
             <input
               id="search"
               type="search"
               className="input search__input"
-              placeholder="Search words, titles, places, authors"
+              placeholder="Search words, captions, places, authors"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoComplete="off"

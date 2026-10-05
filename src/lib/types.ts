@@ -4,11 +4,18 @@ import type { Mood, Motif, Season, TimeOfDay, ArtSpec } from "../../shared/const
 export type BlobRef = string;
 
 export interface Photo {
+  /** Stable, so a caption, its place in the list and its cloud copy keep pointing at the same picture. */
+  id: string;
   url: BlobRef;
   thumbUrl: BlobRef;
+  /** Description for screen readers. */
   alt: string;
   /** True once the person has changed the suggested alt text. */
   altEdited?: boolean;
+  /** A line shown under the picture, the way a blog captions a photograph. */
+  caption: string;
+  width?: number;
+  height?: number;
 }
 
 export interface Illustration {
@@ -35,7 +42,7 @@ export interface Entry {
   id: string;
   status: "draft" | "finished";
   text: string;
-  photo: Photo | null;
+  photos: Photo[];
   place: { name: string } | null;
   /** UTC ISO string of the first keystroke or photo. */
   startedAt: string | null;
@@ -63,6 +70,8 @@ export interface Entry {
   share: { linkToken: string | null; published: boolean };
   /** Background work after Finish. */
   steps: { reflection: StepState; illustration: StepState };
+  /** Set when the entry is moved to Recently deleted. It is removed for good 30 days later. */
+  deletedAt?: number | null;
   /** Local bookkeeping (ms since epoch). */
   createdAt: number;
   updatedAt: number;
@@ -118,38 +127,34 @@ export const DEFAULT_SETTINGS: Settings = {
   updatedAt: 0,
 };
 
-export interface OpeningThoughtLine {
-  quote: string;
-  author: string;
-  source: string | null;
-  isParaphrase: boolean;
-}
-
 /** Small values kept beside the entries. */
 export interface Meta {
   welcomed: boolean;
   currentDraftId: string | null;
   recentVoices: string[];
-  nextOpeningThought: OpeningThoughtLine | null;
-  recentOpeningVoices: string[];
+  /** The thought on the blank page: its place in the library, and when it was first shown. */
+  openingThought: { index: number; shownAt: number } | null;
+  /** Library positions already shown, so a line isn't repeated until every one has been seen. */
   starterUsed: number[];
   questionIndex: number;
   seenLeafCount: number;
   signInNudgeShown: boolean;
   lastPullAt: string | null;
   locationAsked: boolean;
+  /** When this device last made a backup file (ms since epoch). */
+  lastBackupAt: number | null;
 }
 
 export const DEFAULT_META: Meta = {
   welcomed: false,
   currentDraftId: null,
   recentVoices: [],
-  nextOpeningThought: null,
-  recentOpeningVoices: [],
+  openingThought: null,
   starterUsed: [],
   questionIndex: 0,
   seenLeafCount: 0,
   signInNudgeShown: false,
   lastPullAt: null,
   locationAsked: false,
+  lastBackupAt: null,
 };

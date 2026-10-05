@@ -14,6 +14,12 @@ function setRobots(content: string) {
   meta.content = content;
 }
 
+/** Links made before captions existed have one photo; newer ones have a list. */
+function sharedPhotos(s: SharedSnapshot): { url: string; alt: string; caption: string }[] {
+  if (s.photos?.length) return s.photos;
+  return s.photoUrl ? [{ url: s.photoUrl, alt: s.photoAlt ?? "", caption: "" }] : [];
+}
+
 export function SnapshotView({ s, seed, headingLevel = 1 }: { s: SharedSnapshot; seed: string; headingLevel?: 1 | 2 }) {
   const H = headingLevel === 1 ? "h1" : "h2";
   return (
@@ -27,7 +33,18 @@ export function SnapshotView({ s, seed, headingLevel = 1 }: { s: SharedSnapshot;
       ) : null}
       <H className="entry__title">{s.title}</H>
       <p className="stamp">{s.stamp}</p>
-      {s.photoUrl ? <img className="entry__photo" src={s.photoUrl} alt={s.photoAlt || "Photo"} loading="lazy" /> : null}
+      {sharedPhotos(s).length ? (
+        <div className="entry__photos">
+          {sharedPhotos(s).map((p) => (
+            <figure className="entry__figure" key={p.url}>
+              <div className="entry__frame">
+                <img src={p.url} alt={p.alt || (p.caption ? "" : "Photo")} loading="lazy" />
+              </div>
+              {p.caption ? <figcaption className="entry__caption">{p.caption}</figcaption> : null}
+            </figure>
+          ))}
+        </div>
+      ) : null}
       <div className="entry__text">
         {s.text.split(/\n{2,}/).map((p, i) => (
           <p key={i}>{p}</p>

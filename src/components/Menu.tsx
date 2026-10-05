@@ -7,7 +7,21 @@ export interface MenuItem {
 }
 
 /** A disclosure menu with arrow-key support that closes on Escape or outside tap. */
-export function Menu({ label, icon, items }: { label: string; icon?: React.ReactNode; items: MenuItem[] }) {
+export function Menu({
+  label,
+  icon,
+  items,
+  triggerClassName = "button button--quiet button--icon",
+  hideLabel = false,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  items: MenuItem[];
+  /** Classes for the button that opens the menu. */
+  triggerClassName?: string;
+  /** Show only the icon; the label is still read aloud. */
+  hideLabel?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const wrap = useRef<HTMLDivElement>(null);
@@ -47,14 +61,15 @@ export function Menu({ label, icon, items }: { label: string; icon?: React.React
       <button
         ref={button}
         type="button"
-        className="button button--quiet button--icon"
+        className={triggerClassName}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={id}
+        aria-label={hideLabel ? label : undefined}
         onClick={() => setOpen((o) => !o)}
       >
         {icon}
-        <span>{label}</span>
+        {hideLabel ? null : <span>{label}</span>}
       </button>
       {open ? (
         <div className="menu__list" role="menu" id={id} aria-label={label}>

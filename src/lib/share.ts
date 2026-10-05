@@ -1,9 +1,12 @@
 import { formatStamp } from "./dates";
 import { getBlob, updateEntry } from "./db";
 import { supabase } from "./auth";
+import { entryMarkdown, slug } from "./markdown";
 import { newToken } from "./rng";
 import { paperPath } from "../components/Illustration";
 import type { Entry, Reflection } from "./types";
+
+export { slug };
 
 /**
  * Nothing leaves the app unless the person chooses. Place is left out unless
@@ -12,40 +15,6 @@ import type { Entry, Reflection } from "./types";
  */
 
 // ---- Markdown ---------------------------------------------------------------
-
-function reflectionMarkdown(r: Reflection, crisis: boolean): string {
-  const blocks: string[] = [];
-  if (!crisis && r.quote) {
-    const quote = r.isParaphrase ? r.quote : `\u201c${r.quote}\u201d`;
-    const by = `${r.isParaphrase ? "after " : ""}${r.author ?? ""}${r.source ? `, ${r.source}` : ""}`;
-    blocks.push(`> ${quote}\n>\n> ${by}`);
-  }
-  if (r.bridge) blocks.push(r.bridge);
-  return blocks.join("\n\n");
-}
-
-export function entryMarkdown(e: Entry, opts: { withPlace: boolean; withReflection?: boolean; frontMatter?: boolean }): string {
-  const lines: string[] = [];
-  if (opts.frontMatter) {
-    const esc = (s: string) => JSON.stringify(s);
-    lines.push("---");
-    lines.push(`title: ${esc(e.title ?? "")}`);
-    lines.push(`date: ${e.finishedAt ?? ""}`);
-    if (e.startedAt) lines.push(`began: ${e.startedAt}`);
-    lines.push(`timeZone: ${e.timeZone}`);
-    if (e.place && opts.withPlace) lines.push(`place: ${esc(e.place.name)}`);
-    if (e.editedAt) lines.push(`edited: ${e.editedAt}`);
-    if (e.mood) lines.push(`mood: ${e.mood}`);
-    lines.push("---", "");
-  }
-  lines.push(`# ${e.title ?? "Untitled"}`, "");
-  lines.push(`*${formatStamp(e, { withPlace: opts.withPlace })}*`, "");
-  if (e.text.trim()) lines.push(e.text.trim(), "");
-  if (opts.withReflection !== false && e.reflection) {
-    lines.push("---", "", reflectionMarkdown(e.reflection, e.crisis), "");
-  }
-  return lines.join("\n");
-}
 
 export async function copyMarkdown(e: Entry, withPlace: boolean): Promise<boolean> {
   try {
@@ -136,12 +105,22 @@ export async function renderCard(e: Entry, o: CardOptions): Promise<Blob> {
   ctx.font = 'italic 400 30px "Literata", Georgia, serif';
   const quoteText = r ? (r.isParaphrase ? r.quote! : `“${r.quote}”`) : "";
   const quoteLines = r ? wrapLines(ctx, quoteText, inner, 4) : [];
+  // A photo keeps its caption on the card, like a blog post.
+  const cardPhoto = o.image === "photo" ? e.photos[0] : undefined;
+  ctx.font = 'italic 400 28px "Literata", Georgia, serif';
+  const captionLines = cardPhoto?.caption.trim() ? wrapLines(ctx, cardPhoto.caption.trim().replace(/\s+/g, " "), inner, 2) : [];
+  const captionHeight = captionLines.length ? 20 + captionLines.length * 40 : 0;
 
   const textHeight =
-    titleLines.length * 68 + 24 + 40 + (excerptLines.length ? 32 + excerptLines.length * 52 : 0) + (quoteLines.length ? 48 + quoteLines.length * 44 + 44 : 0);
+    titleLines.length * 68 +
+    24 +
+    40 +
+    captionHeight +
+    (excerptLines.length ? 32 + excerptLines.length * 52 : 0) +
+    (quoteLines.length ? 48 + quoteLines.length * 44 + 44 : 0);
   const imageSize = Math.max(360, Math.min(inner, CARD_H - margin * 2 - textHeight - 48));
 
-  const ref = o.image === "photo" && e.photo ? e.photo.url : e.illustration?.url;
+  const ref = cardPhoto ? cardPhoto.url : e.illustration?.url;
   const blob = ref ? await getBlob(ref) : undefined;
   let y = margin;
   if (blob) {
@@ -165,7 +144,18 @@ export async function renderCard(e: Entry, o: CardOptions): Promise<Blob> {
     const h = img.naturalHeight * s;
     ctx.drawImage(img, x + (imageSize - w) / 2, y + (imageSize - h) / 2, w, h);
     ctx.restore();
-    y += imageSize + 48;
+    y += imageSize;
+    if (captionLines.length) {
+      y += 20;
+      ctx.textBaseline = "top";
+      ctx.fillStyle = c.muted;
+      ctx.font = 'italic 400 28px "Literata", Georgia, serif';
+      for (const line of captionLines) {
+        ctx.fillText(line, margin, y);
+        y += 40;
+      }
+    }
+    y += 48;
   }
 
   ctx.textBaseline = "top";
@@ -229,18 +219,6 @@ export function downloadBlob(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-export function slug(s: string): string {
-  return (
-    s
-      .toLowerCase()
-      .normalize("NFKD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48) || "entry"
-  );
-}
-
 // ---- links and the public page ------------------------------------------------
 
 export interface SharedSnapshot {
@@ -250,8 +228,10 @@ export interface SharedSnapshot {
   finishedAt: string;
   illustrationUrl: string | null;
   illustrationAlt: string;
-  photoUrl: string | null;
-  photoAlt: string;
+  /** Older links have a single photo here; newer ones use photos. */
+  photoUrl?: string | null;
+  photoAlt?: string;
+  photos?: { url: string; alt: string; caption: string }[];
   reflection: Pick<Reflection, "quote" | "author" | "source" | "isParaphrase" | "bridge"> | null;
 }
 
@@ -265,6 +245,15 @@ async function uploadShared(uid: string, token: string, name: string, ref: strin
   const { error } = await sb.storage.from("shared").upload(path, blob, { upsert: true, contentType: blob.type });
   if (error) throw error;
   return sb.storage.from("shared").getPublicUrl(path).data.publicUrl;
+}
+
+async function uploadSharedPhotos(uid: string, token: string, e: Entry) {
+  const out: { url: string; alt: string; caption: string }[] = [];
+  for (const [i, p] of e.photos.entries()) {
+    const url = await uploadShared(uid, token, `photo-${i + 1}`, p.url);
+    if (url) out.push({ url, alt: p.alt, caption: p.caption });
+  }
+  return out;
 }
 
 export interface SnapshotOptions {
@@ -289,8 +278,7 @@ async function makeShare(e: Entry, kind: "link" | "published", o: SnapshotOption
     finishedAt: e.finishedAt ?? "",
     illustrationUrl: await uploadShared(uid, token, "illustration", e.illustration?.url),
     illustrationAlt: e.illustration?.alt ?? "",
-    photoUrl: o.withPhoto ? await uploadShared(uid, token, "photo", e.photo?.url) : null,
-    photoAlt: e.photo?.alt ?? "",
+    photos: o.withPhoto ? await uploadSharedPhotos(uid, token, e) : [],
     reflection:
       o.withReflection && e.reflection && !e.crisis
         ? {
@@ -307,19 +295,30 @@ async function makeShare(e: Entry, kind: "link" | "published", o: SnapshotOption
   return token;
 }
 
-async function removeShare(e: Entry, kind: "link" | "published") {
+/** Turns off a link or public page for an entry, and removes the copies of its pictures that were made for it. */
+export async function removeSharesFor(entryId: string, kind?: "link" | "published") {
   const sb = await supabase();
   if (!sb) return;
   const { data } = await sb.auth.getSession();
   const uid = data.session?.user.id;
-  if (!uid) return;
-  const { data: rows } = await sb.from("shares").select("token").eq("entry_id", e.id).eq("kind", kind);
+  if (!uid) throw new Error("Sign in to turn off a link.");
+  let query = sb.from("shares").select("token").eq("entry_id", entryId);
+  if (kind) query = query.eq("kind", kind);
+  const { data: rows, error } = await query;
+  if (error) throw error;
   for (const row of rows ?? []) {
     const token = row.token as string;
     const { data: files } = await sb.storage.from("shared").list(`${uid}/${token}`);
     if (files?.length) await sb.storage.from("shared").remove(files.map((f) => `${uid}/${token}/${f.name}`));
   }
-  await sb.from("shares").delete().eq("entry_id", e.id).eq("kind", kind);
+  let del = sb.from("shares").delete().eq("entry_id", entryId);
+  if (kind) del = del.eq("kind", kind);
+  const { error: delError } = await del;
+  if (delError) throw delError;
+}
+
+async function removeShare(e: Entry, kind: "link" | "published") {
+  await removeSharesFor(e.id, kind);
 }
 
 export function shareUrl(token: string) {

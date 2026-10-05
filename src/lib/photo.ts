@@ -49,14 +49,17 @@ export function canvasToBlob(canvas: HTMLCanvasElement, type = "image/jpeg", qua
 export interface ProcessedPhoto {
   full: Blob;
   thumb: Blob;
+  width: number;
+  height: number;
 }
 
 export async function processPhoto(file: File): Promise<ProcessedPhoto> {
   const bitmap = await decode(file);
   try {
-    const full = await canvasToBlob(canvasFor(bitmap, PHOTO_LONG_EDGE), "image/jpeg", 0.84);
+    const fullCanvas = canvasFor(bitmap, PHOTO_LONG_EDGE);
+    const full = await canvasToBlob(fullCanvas, "image/jpeg", 0.86);
     const thumb = await canvasToBlob(canvasFor(bitmap, THUMB_LONG_EDGE), "image/jpeg", 0.8);
-    return { full, thumb };
+    return { full, thumb, width: fullCanvas.width, height: fullCanvas.height };
   } finally {
     bitmap.close();
   }

@@ -1,26 +1,56 @@
 import { describe, expect, it } from "vitest";
 import { moodFromText, sceneFromText } from "../illustration/understand";
-import { localTitle, hasContent, firstLine } from "./entries";
+import { localTitle, hasContent, firstLine, movedPhoto, withPhoto, wordsOf } from "./entries";
+import type { Photo } from "./types";
+
+const photo = (id: string, caption = ""): Photo => ({ id, url: `idb:${id}`, thumbUrl: `idb:${id}-thumb`, alt: "", caption });
 
 describe("localTitle", () => {
   it("uses the first words without ending on a joining word", () => {
-    expect(localTitle({ text: "Walked to the river after work. It was gold.", photo: null })).toBe("Walked to the river");
+    expect(localTitle({ text: "Walked to the river after work. It was gold.", photos: [] })).toBe("Walked to the river");
   });
-  it("names photo-only entries", () => {
-    expect(localTitle({ text: "", photo: { url: "idb:x", thumbUrl: "idb:y", alt: "" } })).toBe("Photo of the day");
+  it("doesn't end on a word that leads into something cut off", () => {
+    expect(localTitle({ text: "Walked by the river this morning.", photos: [] })).toBe("Walked by the river");
+  });
+  it("names photo-only entries, using the caption when there is one", () => {
+    expect(localTitle({ text: "", photos: [photo("x")] })).toBe("Photo of the day");
+    expect(localTitle({ text: "", photos: [photo("x", "Low sun on the lake. Cold hands.")] })).toBe("Low sun on the lake");
   });
   it("capitalises the first word", () => {
-    expect(localTitle({ text: "quiet morning", photo: null })).toBe("Quiet morning");
+    expect(localTitle({ text: "quiet morning", photos: [] })).toBe("Quiet morning");
   });
 });
 
 it("knows when there is something to finish", () => {
-  expect(hasContent({ text: "   ", photo: null })).toBe(false);
-  expect(hasContent({ text: "a", photo: null })).toBe(true);
+  expect(hasContent({ text: "   ", photos: [] })).toBe(false);
+  expect(hasContent({ text: "a", photos: [] })).toBe(true);
+  expect(hasContent({ text: "", photos: [photo("x")] })).toBe(true);
 });
 
 it("shortens long first lines at a word", () => {
   expect(firstLine("one two three four", 10)).toBe("one two…");
+});
+
+describe("photos on a page", () => {
+  it("changes one photo's caption and leaves the others alone", () => {
+    const list = [photo("a", "first"), photo("b", "second")];
+    const next = withPhoto(list, "b", { caption: "changed" });
+    expect(next.map((p) => p.caption)).toEqual(["first", "changed"]);
+    expect(list[1].caption).toBe("second");
+  });
+
+  it("moves a photo earlier or later, and never off the ends", () => {
+    const list = [photo("a"), photo("b"), photo("c")];
+    expect(movedPhoto(list, "c", -1).map((p) => p.id)).toEqual(["a", "c", "b"]);
+    expect(movedPhoto(list, "a", 1).map((p) => p.id)).toEqual(["b", "a", "c"]);
+    expect(movedPhoto(list, "a", -1)).toBe(list);
+    expect(movedPhoto(list, "c", 1)).toBe(list);
+  });
+
+  it("counts captions among the words a drawing and reflection are made from", () => {
+    expect(wordsOf({ text: "A good day.", photos: [photo("a", "The lake at dawn"), photo("b")] })).toBe("A good day.\n\nThe lake at dawn");
+    expect(wordsOf({ text: "", photos: [photo("a", "Snow on the hills")] })).toBe("Snow on the hills");
+  });
 });
 
 describe("reading an entry on the device", () => {

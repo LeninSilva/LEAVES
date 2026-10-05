@@ -65,7 +65,7 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
       <div className="stack share">
         <fieldset className="group">
           <legend>What to include</legend>
-          {entry.photo ? (
+          {entry.photos.length > 0 ? (
             <div className="segmented" role="radiogroup" aria-label="Picture">
               {(["illustration", "photo"] as const).map((v) => (
                 <label key={v} className="segmented__option">
@@ -162,10 +162,10 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
             </div>
           ) : (
             <div className="stack">
-              {entry.photo ? (
+              {entry.photos.length > 0 ? (
                 <label className="check">
                   <input type="checkbox" checked={withPhoto} onChange={(e) => setWithPhoto(e.target.checked)} />
-                  <span>Include my photo</span>
+                  <span>{entry.photos.length > 1 ? "Include my photos and captions" : "Include my photo and caption"}</span>
                 </label>
               ) : null}
               <button type="button" className="button button--soft" disabled={!!busy} onClick={() => run("link", async () => void (await createLink(entry, snap)))}>

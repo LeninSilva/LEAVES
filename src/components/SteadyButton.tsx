@@ -30,6 +30,11 @@ export const SteadyButton = forwardRef<HTMLButtonElement, Props>(function Steady
         pressed.current = null;
         if (disabled) return;
         handled.current = true;
+        // The click that follows is this press's echo. If none comes, don't let the
+        // flag swallow a later keyboard press.
+        window.setTimeout(() => {
+          handled.current = false;
+        }, 600);
         onPress();
       }}
       onPointerCancel={() => {
