@@ -12,13 +12,13 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * Automatic follows the phone. Warm evenings, when on, switches to Lamplight
- * inside its window unless Lamplight is already chosen.
+ * Automatic follows the phone, and with Warm evenings on it switches to Lamplight
+ * inside its window. Choosing Daylight or Lamplight yourself is always obeyed.
  */
 export function resolveTheme(s: Pick<Settings, "theme" | "warmEvenings" | "warmEveningsFrom" | "warmEveningsTo">, now = new Date(), systemDark = prefersDark()): ResolvedTheme {
   if (s.theme === "lamplight") return "lamplight";
-  if (s.warmEvenings && inWindow(now, s.warmEveningsFrom, s.warmEveningsTo)) return "lamplight";
   if (s.theme === "daylight") return "daylight";
+  if (s.warmEvenings && inWindow(now, s.warmEveningsFrom, s.warmEveningsTo)) return "lamplight";
   return systemDark ? "lamplight" : "daylight";
 }
 

@@ -137,6 +137,116 @@ export const VOICE_LIST: Voice[] = [
   v("whitman", "Walt Whitman", "americas", "1819–1892", "American poet of Leaves of Grass, who sang the self and the crowd."),
   v("dickinson", "Emily Dickinson", "americas", "1830–1886", "American poet of small rooms and large silences."),
   v("gibran", "Kahlil Gibran", "middle-east", "1883–1931", "Lebanese-American poet and painter, author of The Prophet."),
+
+  // ---- added: antiquity ----
+  v("plato", "Plato", "antiquity", "c. 428–348 BCE", "Athenian philosopher, student of Socrates and founder of the Academy. His dialogues are where Socrates still speaks."),
+  v("plutarch", "Plutarch", "antiquity", "c. 46–c. 120 CE", "Greek biographer and essayist of Chaeronea, who wrote the Parallel Lives and the Moralia."),
+  v("cicero", "Cicero", "antiquity", "106–43 BCE", "Roman statesman, orator and philosopher, whose letters read like conversation."),
+
+  // ---- added: China and Japan ----
+  v("dogen", "Dōgen", "china-japan", "1200–1253", "Japanese Zen master who founded the Sōtō school and wrote of practice as awakening itself.", true),
+  v("ryokan", "Ryōkan", "china-japan", "1758–1831", "Japanese Zen monk and poet who lived simply in a hut and played with the village children."),
+  v("chiyo-ni", "Chiyo-ni", "china-japan", "1703–1775", "Japanese haiku poet, among the most admired women poets of her time."),
+
+  // ---- added: India and Nepal ----
+  v("buddha", "The Buddha", "south-asia", "c. 5th century BCE", "Siddhartha Gautama, who taught the end of suffering through understanding, kindness and attention.", true),
+  v("gandhi", "Mohandas Gandhi", "south-asia", "1869–1948", "Leader of India's independence movement, who held that nonviolence is the strongest force there is."),
+
+  // ---- added: Persia, the Arab world and Islam ----
+  v("rabia", "Rabia al-Adawiyya", "middle-east", "c. 717–801", "Sufi saint and poet of Basra, remembered for loving God for God's own sake.", true),
+  v("ali", "Ali ibn Abi Talib", "middle-east", "601–661", "Cousin and son-in-law of the Prophet Muhammad and the fourth caliph. Nahj al-Balagha gathers his sermons and letters, and is cherished by Shia Muslims.", true),
+
+  // ---- added: Jewish and Christian voices ----
+  v("proverbs", "The Book of Proverbs", "abrahamic", undefined, "Wisdom sayings of the Hebrew Bible.", true),
+  v("psalms", "The Psalms", "abrahamic", undefined, "The songs and prayers of the Hebrew Bible.", true),
+  v("micah", "Micah", "abrahamic", "8th century BCE", "A prophet of ancient Israel who asked what is truly required of us.", true),
+  v("song-of-songs", "The Song of Songs", "abrahamic", undefined, "A love poem of the Hebrew Bible, full of spring.", true),
+  v("gospel-matthew", "The Gospel of Matthew", "abrahamic", undefined, "One of the four accounts of the life and teaching of Jesus.", true),
+  v("paul", "Paul of Tarsus", "abrahamic", "died c. 64", "Apostle and letter writer of the early Christian movement.", true),
+  v("augustine", "Augustine of Hippo", "abrahamic", "354–430", "North African bishop and philosopher, author of the Confessions.", true),
+  v("teresa", "Teresa of Ávila", "abrahamic", "1515–1582", "Spanish Carmelite nun, mystic and reformer, and the first woman named a Doctor of the Church.", true),
+  v("buber", "Martin Buber", "abrahamic", "1878–1965", "Jewish philosopher of dialogue, who wrote that real life is meeting.", true),
+  v("heschel", "Abraham Joshua Heschel", "abrahamic", "1907–1972", "Rabbi, philosopher and civil rights ally, who wrote of wonder and of the holiness of time.", true),
+  v("francis", "Pope Francis", "abrahamic", "1936–2025", "The first pope from the Americas, who wrote on mercy, the poor and care for our common home.", true),
+  v("leo-xiv", "Pope Leo XIV", "abrahamic", "born 1955", "Elected in May 2025, the first pope born in the United States; a missionary in Peru before he was a bishop.", true),
+  v("king", "Martin Luther King Jr.", "justice", "1929–1968", "Baptist minister and leader of the American civil rights movement."),
+
+  // ---- added: Europe ----
+  v("blake", "William Blake", "europe", "1757–1827", "English poet and engraver who saw the infinite in small things."),
+  v("wordsworth", "William Wordsworth", "europe", "1770–1850", "English Romantic poet of walking, memory and ordinary people."),
+  v("tennyson", "Alfred, Lord Tennyson", "europe", "1809–1892", "English poet of In Memoriam, a long song of grief and faith."),
+  v("shelley", "Percy Bysshe Shelley", "europe", "1792–1822", "English Romantic poet of wind, change and hope."),
+  v("rossetti", "Christina Rossetti", "europe", "1830–1894", "English poet of devotion, longing and clear small images."),
+  v("hopkins", "Gerard Manley Hopkins", "europe", "1844–1889", "English Jesuit poet who heard the whole of nature singing."),
+  v("yeats", "W. B. Yeats", "europe", "1865–1939", "Irish poet and Nobel laureate."),
+  v("frost", "Robert Frost", "americas", "1874–1963", "American poet of New England fields, woods and plain speech."),
+  v("wilde", "Oscar Wilde", "europe", "1854–1900", "Irish writer of wit, who also knew what it is to be in the gutter."),
+  v("cather", "Willa Cather", "americas", "1873–1947", "American novelist of the prairie and of the people who settled it."),
+  v("barrett-browning", "Elizabeth Barrett Browning", "europe", "1806–1861", "English poet of Aurora Leigh and Sonnets from the Portuguese."),
+  v("anne-frank", "Anne Frank", "europe", "1929–1945", "A young diarist who wrote in hiding in Amsterdam during the war."),
+  v("dostoevsky", "Fyodor Dostoevsky", "europe", "1821–1881", "Russian novelist of conscience, doubt and forgiveness."),
+  v("kant", "Immanuel Kant", "europe", "1724–1804", "German philosopher of Königsberg who asked what we can know, what we ought to do and what we may hope."),
+  v("rousseau", "Jean-Jacques Rousseau", "europe", "1712–1778", "Genevan philosopher and writer of The Social Contract and the Confessions."),
+  v("wollstonecraft", "Mary Wollstonecraft", "europe", "1759–1797", "English writer who argued for the education and equality of women."),
+  v("descartes", "René Descartes", "europe", "1596–1650", "French philosopher who began by doubting everything and found he could not doubt that he was thinking."),
+  v("nietzsche", "Friedrich Nietzsche", "existential", "1844–1900", "German philosopher of becoming who you are, of the body and of loyalty to the earth."),
+  v("machado", "Antonio Machado", "europe", "1875–1939", "Spanish poet of roads, orchards and plain wisdom."),
+
+  // ---- added: existentialists and phenomenologists ----
+  v("sartre", "Jean-Paul Sartre", "existential", "1905–1980", "French philosopher and writer who held that we are what we make of ourselves."),
+  v("camus", "Albert Camus", "existential", "1913–1960", "French-Algerian writer of the absurd, and of the revolt that refuses despair."),
+  v("beauvoir", "Simone de Beauvoir", "existential", "1908–1986", "French philosopher of freedom, ambiguity and the situation of women."),
+  v("merleau-ponty", "Maurice Merleau-Ponty", "existential", "1908–1961", "French phenomenologist who showed that perception begins in the living body."),
+  v("arendt", "Hannah Arendt", "existential", "1906–1975", "Political thinker of action, plurality and beginning anew."),
+
+  // ---- added: virtue, care and the good life ----
+  v("murdoch", "Iris Murdoch", "virtue", "1919–1999", "Irish-born philosopher and novelist who wrote that morality is a matter of attention and love."),
+  v("hursthouse", "Rosalind Hursthouse", "virtue", "born 1943", "New Zealand philosopher whose On Virtue Ethics set out a modern account of acting as a virtuous person would."),
+  v("annas", "Julia Annas", "virtue", "born 1942", "Philosopher of ancient ethics, who compares learning a virtue to learning a skill."),
+  v("norlock", "Kathryn J. Norlock", "virtue", undefined, "Feminist philosopher of forgiveness, hope and living well in a world that doesn't get fixed."),
+  v("ruddick", "Sara Ruddick", "virtue", "1935–2011", "American philosopher of maternal thinking and peacemaking."),
+  v("schwitzgebel", "Eric Schwitzgebel", "virtue", undefined, "Philosopher of belief, attitude and the strangeness of the mind."),
+
+  // ---- added: philosophers of today ----
+  v("noe", "Alva Noë", "today", "born 1964", "Philosopher at Berkeley who argues that consciousness is something we do together with the world, and that perception is a form of care."),
+  v("ginsborg", "Hannah Ginsborg", "today", undefined, "Philosopher at Berkeley, who writes on Kant, on judgment and on the ordinary sense of what fits."),
+  v("searle", "John Searle", "today", "born 1932", "American philosopher of language and mind, who worked out what we do when we speak."),
+  v("cherry", "Myisha Cherry", "today", undefined, "Philosopher of anger, love and justice, and host of the UnMute podcast."),
+
+  // ---- added: justice and liberation ----
+  v("marx", "Karl Marx", "justice", "1818–1883", "German philosopher and economist who wanted not only to understand the world but to change it."),
+  v("engels", "Friedrich Engels", "justice", "1820–1895", "German philosopher, Marx's friend and collaborator."),
+  v("mao", "Mao Zedong", "justice", "1893–1976", "Leader of the Chinese Communist revolution. His essay On Practice is about how knowledge is made."),
+  v("che", "Che Guevara", "justice", "1928–1967", "Argentine doctor who became a leader of the Cuban Revolution."),
+  v("fidel", "Fidel Castro", "justice", "1926–2016", "Leader of the Cuban Revolution."),
+  v("lorde", "Audre Lorde", "africa", "1934–1992", "Black lesbian poet, essayist and warrior, who wrote that our silences will not protect us."),
+  v("hooks", "bell hooks", "africa", "1952–2021", "American writer and teacher on race, class, gender and love."),
+  v("baldwin", "James Baldwin", "africa", "1924–1987", "American novelist and essayist who looked at America without flinching."),
+  v("douglass", "Frederick Douglass", "africa", "c. 1818–1895", "Born into slavery, he became a writer, speaker and leading abolitionist."),
+  v("angelou", "Maya Angelou", "africa", "1928–2014", "American poet, memoirist and civil rights activist."),
+  v("mandela", "Nelson Mandela", "africa", "1918–2013", "Freed after 27 years in prison, he became South Africa's first democratically elected president."),
+  v("adichie", "Chimamanda Ngozi Adichie", "africa", "born 1977", "Nigerian novelist and essayist."),
+  v("havel", "Václav Havel", "europe", "1936–2011", "Playwright and dissident who became the president of a free Czechoslovakia."),
+
+  // ---- added: the Americas ----
+  v("neruda", "Pablo Neruda", "americas", "1904–1973", "Chilean poet and Nobel laureate, of love, the sea and common things."),
+  v("garcia-marquez", "Gabriel García Márquez", "americas", "1927–2014", "Colombian novelist and Nobel laureate, author of One Hundred Years of Solitude."),
+  v("mistral", "Gabriela Mistral", "americas", "1889–1957", "Chilean poet, teacher and the first Latin American Nobel laureate in literature."),
+  v("marti", "José Martí", "americas", "1853–1895", "Cuban poet, essayist and leader of the struggle for independence."),
+  v("parra", "Violeta Parra", "americas", "1917–1967", "Chilean singer, songwriter and folklorist."),
+
+  // ---- added: nature writers ----
+  v("muir", "John Muir", "nature", "1838–1914", "Scottish-American naturalist who helped save Yosemite and founded the Sierra Club."),
+  v("carson", "Rachel Carson", "nature", "1907–1964", "American biologist and writer whose Silent Spring began the modern environmental movement."),
+  v("leopold", "Aldo Leopold", "nature", "1887–1948", "American ecologist who wrote A Sand County Almanac and argued for a land ethic."),
+  v("kimmerer", "Robin Wall Kimmerer", "nature", "born 1953", "Botanist and member of the Citizen Potawatomi Nation, author of Braiding Sweetgrass."),
+  v("oliver", "Mary Oliver", "nature", "1935–2019", "American poet of attention, woods and ponds."),
+  v("berry", "Wendell Berry", "nature", "born 1934", "Kentucky farmer, poet and essayist."),
+
+  // ---- added: a further batch ----
+  v("muhammad", "The Prophet Muhammad", "middle-east", "c. 570–632", "The Prophet of Islam. His sayings, the hadith, are gathered by many scholars.", true),
+  v("horace", "Horace", "antiquity", "65–8 BCE", "Roman lyric poet of the Odes, who advised living well in the present."),
+  v("terence", "Terence", "antiquity", "c. 195–159 BCE", "Roman playwright, born in North Africa and once enslaved, who wrote comedies of ordinary life."),
 ];
 
 export const VOICES: Readonly<Record<string, Voice>> = Object.freeze(Object.fromEntries(VOICE_LIST.map((x) => [x.id, x])));

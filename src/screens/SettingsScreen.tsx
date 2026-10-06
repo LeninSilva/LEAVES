@@ -153,7 +153,7 @@ export function SettingsScreen() {
           />
           <Toggle
             label="Warm evenings"
-            hint={`Switch to Lamplight from ${formatClock(s.warmEveningsFrom)} to ${formatClock(s.warmEveningsTo)}.`}
+            hint={`With the Automatic theme, switch to Lamplight from ${formatClock(s.warmEveningsFrom)} to ${formatClock(s.warmEveningsTo)}.`}
             checked={s.warmEvenings}
             onChange={(warmEvenings) => set({ warmEvenings })}
           />

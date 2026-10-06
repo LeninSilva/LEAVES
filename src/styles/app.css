@@ -1778,3 +1778,127 @@
   padding-top: 0;
   min-height: var(--target);
 }
+
+/* ---- voices ----------------------------------------------------------------------- */
+
+.voices__intro {
+  margin-bottom: var(--space-3);
+  max-width: var(--measure);
+}
+
+.chips-row {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  padding: var(--space-2) 0 var(--space-1);
+  scrollbar-width: none;
+}
+
+.chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-chip {
+  flex: none;
+  min-height: var(--target);
+  padding: 0 var(--space-2);
+  border: 1.5px solid var(--color-control-outline);
+  border-radius: var(--radius-round);
+  background: transparent;
+  font-weight: var(--weight-ui-strong);
+  font-size: var(--size-15);
+  cursor: pointer;
+}
+
+.filter-chip[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-color: var(--color-accent);
+}
+
+.voice-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1) 0;
+  min-height: var(--target);
+  border-bottom: 1px solid var(--color-hairline);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.voice-row__name {
+  font-family: var(--font-words);
+  font-size: var(--size-20);
+  font-weight: var(--weight-title);
+}
+
+.voice-row__meta,
+.voice__meta {
+  color: var(--color-text-muted);
+  font-size: var(--size-15);
+}
+
+.voice__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.voice-quote__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-3);
+}
+
+.voice-quote__actions .navlink {
+  padding: 0;
+  font-size: var(--size-15);
+}
+
+.opening__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+}
+
+/* ---- leaves drifting behind the page ------------------------------------------------- */
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.4;
+  transition: opacity var(--duration-slow) var(--ease-soft);
+}
+
+.ambient--still {
+  opacity: 0;
+}
+
+.ambient__leaf {
+  position: absolute;
+  top: -40px;
+  animation: ambient-fall linear infinite;
+  will-change: transform;
+}
+
+@keyframes ambient-fall {
+  0% { transform: translate(0, -5dvh) rotate(0deg); }
+  25% { transform: translate(var(--sway), 28dvh) rotate(calc(var(--turn) * 0.25)); }
+  50% { transform: translate(calc(var(--sway) * -0.7), 56dvh) rotate(calc(var(--turn) * 0.5)); }
+  75% { transform: translate(calc(var(--sway) * 0.9), 84dvh) rotate(calc(var(--turn) * 0.75)); }
+  100% { transform: translate(0, 112dvh) rotate(var(--turn)); }
+}
+
+:root[data-reduce-motion="true"] .ambient {
+  display: none;
+}
+
+:root[data-keyboard="open"] .ambient {
+  opacity: 0;
+}

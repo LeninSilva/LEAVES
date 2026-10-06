@@ -61,7 +61,7 @@ The Google and Apple buttons appear on their own once you turn them on in Supaba
 
 ### 5. Open it on your phone
 
-Open your address in your phone's browser and add it to your home screen.
+Open your address in your phone's browser and add it to your home screen. Settings also has an **Install** card: one tap on Android, and the two taps shown for iPhone.
 
 - **Android (Chrome):** tap the menu, then **Add to Home screen** or **Install app**.
 - **iPhone (Safari):** tap Share, then **Add to Home Screen**.
@@ -101,6 +101,13 @@ npm run build && npm start   # production: one server for the app and the API
 
 - **Client:** React and TypeScript with Vite. There is no UI framework. Styles are plain CSS driven by design tokens in `src/styles/tokens.css`, one source of truth for color, type, spacing, radius and motion.
 - **Local first:** IndexedDB (`src/lib/db.ts`) is the source of truth on the device. Every keystroke is also written synchronously to `localStorage`, so a killed app never loses a word. Finishing is idempotent, and a late autosave can never turn a finished entry back into a draft.
+- **Keeping pages safe:**
+  - *Photos* are resized, stripped of location and camera data, and saved as files (not text) in IndexedDB, any number per entry, each with a caption. Changes to a page are always applied to its latest version, so words typed while a photo is processing can't be overwritten.
+  - *Deleting* moves an entry to **Recently deleted** for 30 days (`src/lib/db.ts`, `src/screens/TrashScreen.tsx`); its share link is turned off at once, or when back online. A photo removed from an entry keeps its file for a week and is only removed if nothing uses it.
+  - *Backups:* **Back up everything** (`src/lib/backup.ts`) writes one ZIP, a file at a time so large libraries fit, with readable Markdown, photos and captions, drawings, drafts and deleted entries. **Restore from a backup** reads it back without loading it whole and never overwrites newer changes.
+  - Settings shows what is stored and asks the browser to protect it (`navigator.storage.persist()`).
+  - Tests: `src/lib/safety.test.ts`.
+- **Voices:** `shared/voices.ts` (who they were) and `shared/quotes/` (the lines, each with its source, translator and themes). The thought on a blank page is new each time the app is opened (`src/lib/thoughts.ts`), drawn without repeats; reflections prefer lines on what was written (`src/lib/themes.ts`). Add a line at the end of a module in `shared/quotes/`; never reorder, since "already seen" marks refer to positions. Exact quotations use a named public-domain translation, or the author's own words; anything else must be marked `after`. The tests check every line has a real voice, source, themes and a sensible length.
 - **Sync:** `src/lib/sync.ts` pushes and pulls against Supabase: one row per entry and images in a private bucket, isolated by row-level security. Each entry is resolved last write wins.
 - **After Finish:** `src/lib/pipeline.ts` runs the reflection and then the illustration in the background. It survives leaving the screen, waits while offline, and falls back to the starter library and the drawn vignette.
 - **Server:** A Hono app (`server/`). It holds the AI keys, validates every model reply against a Zod schema plus rule checks (no recent or skipped voices, quotes under 40 words, no em dashes or exclamation points), retries once with the reason, and never logs entry text. Server-side fallbacks are on for Claude refusals (`fallbacks: "default"`).
@@ -112,7 +119,7 @@ npm run build && npm start   # production: one server for the app and the API
 
 - Nothing leaves the device unless the person chooses it. Place is off in shares by default. Photos are re-encoded on the device, which removes all EXIF data, including location.
 - Only the entry being reflected on is sent, from the server, to the AI service. For images, only a one-sentence nature scene is sent. **Keep from AI** entries are never sent anywhere.
-- There are no ads, trackers or analytics. **Export everything** makes a ZIP with Markdown and images. **Delete everything** removes local and cloud data.
+- There are no ads, trackers or analytics. **Back up everything** makes a ZIP with Markdown, photos with captions, and a copy Leaves can restore from. Deleted entries wait 30 days in **Recently deleted**. **Delete everything** removes local and cloud data.
 
 ## Decisions worth knowing
 

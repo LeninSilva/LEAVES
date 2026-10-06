@@ -1,3 +1,4 @@
+import { InstallCard } from "../components/InstallCard";
 import { LeafIcon, LockIcon, TreeIcon } from "../components/icons";
 import { cloudConfigured } from "../lib/auth";
 import { go, useRouteState } from "../lib/router";
@@ -28,9 +29,9 @@ export function AboutScreen() {
           endless scroll: a private log you keep for yourself, at your own pace, that isn't meant to be performed or shared.
         </p>
         <p>
-          Each page you finish is returned to you with a small drawing and a thought to keep, from voices across the world and across
-          time, from the maxims of Ptahhotep and the sayings of Confucius to Thiruvalluvar, Saadi, Montaigne and the writers of the
-          Encyclopédie.
+          Each page you finish is returned to you with a small drawing and a thought to keep, and every blank page opens with a new one,
+          from voices across the world and across time: Ptahhotep and Plato, Confucius and Zhuangzi, the Buddha, Thiruvalluvar, Saadi,
+          Montaigne, Marx, Simone de Beauvoir, Camus, Neruda, and philosophers writing today. Browse them all under Voices.
         </p>
 
         <h2 className="section-title">Who we are</h2>
@@ -62,15 +63,7 @@ export function AboutScreen() {
         </ol>
 
         <h2 className="section-title">Keep it on your home screen</h2>
-        <p>Leaves works best opened from an icon on your phone, like any app. It also works offline.</p>
-        <ul className="plain-list">
-          <li>
-            <strong>Android:</strong> in Chrome, tap the menu, then <em>Add to Home screen</em> or <em>Install app</em>.
-          </li>
-          <li>
-            <strong>iPhone:</strong> in Safari, tap Share, then <em>Add to Home Screen</em>.
-          </li>
-        </ul>
+        <InstallCard />
 
         <div className="about__links">
           <button type="button" className="button button--soft" onClick={() => go("/privacy", { from: nav.from })}>
@@ -142,8 +135,9 @@ export function PrivacyScreen() {
           <li>
             <h2>Take it with you, or delete it</h2>
             <p>
-              Export everything as a ZIP of your entries and pictures whenever you like. Delete everything, or your whole account,
-              from Settings with one confirmation.
+              Back up everything as one ZIP of your entries, photos and captions whenever you like, and restore it later. A deleted
+              entry waits in Recently deleted for 30 days, in case you change your mind, and any link you shared stops working at once.
+              Delete everything, or your whole account, from Settings with one confirmation.
             </p>
           </li>
         </ul>

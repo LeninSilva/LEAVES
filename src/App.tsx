@@ -19,6 +19,8 @@ const ReflectionsScreen = lazy(() => import("./screens/ReflectionsScreen").then(
 const SettingsScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.SettingsScreen })));
 const HowAIScreen = lazy(() => import("./screens/SettingsScreen").then((m) => ({ default: m.HowAIScreen })));
 const AccountScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.AccountScreen })));
+const VoicesScreen = lazy(() => import("./screens/VoicesScreen").then((m) => ({ default: m.VoicesScreen })));
+const VoiceScreen = lazy(() => import("./screens/VoicesScreen").then((m) => ({ default: m.VoiceScreen })));
 const TrashScreen = lazy(() => import("./screens/TrashScreen").then((m) => ({ default: m.TrashScreen })));
 const DeletedEntry = lazy(() => import("./screens/TrashScreen").then((m) => ({ default: m.DeletedEntry })));
 const AboutScreen = lazy(() => import("./screens/AboutScreen").then((m) => ({ default: m.AboutScreen })));
@@ -31,6 +33,7 @@ const TITLES: Record<string, string> = {
   "/": "Write",
   "/entries": "Entries",
   "/reflections": "Reflections",
+  "/voices": "Voices",
   "/settings": "Settings",
   "/settings/ai": "How AI is used",
   "/settings/account": "Account",
@@ -132,6 +135,8 @@ export function App() {
   else if ((params = match("/draft/:id", path))) screen = <Write key={params.id} draftId={params.id} />;
   else if (path === "/entries") screen = <EntriesScreen />;
   else if (path === "/reflections") screen = <ReflectionsScreen />;
+  else if (path === "/voices") screen = <VoicesScreen />;
+  else if ((params = match("/voices/:id", path))) screen = <VoiceScreen key={params.id} id={params.id} />;
   else if ((params = match("/entry/:id/edit", path))) screen = <EntryRoute id={params.id} edit />;
   else if ((params = match("/entry/:id", path))) screen = <EntryRoute key={params.id} id={params.id} />;
   else if (path === "/settings") screen = <SettingsScreen />;

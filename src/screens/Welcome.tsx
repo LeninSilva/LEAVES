@@ -1,4 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Dialog } from "../components/Dialog";
+import { InstallCard } from "../components/InstallCard";
+import { promptInstall, useInstall } from "../lib/install";
+import { AmbientLeaves } from "../components/AmbientLeaves";
 import { AuthPanel } from "../components/AuthPanel";
 import { BreathingLeaf } from "../components/BreathingLeaf";
 import { Grass } from "../components/Grass";
@@ -22,6 +26,8 @@ async function begin() {
 export function Welcome() {
   const auth = useAuth();
   const button = useRef<HTMLButtonElement>(null);
+  const install = useInstall();
+  const [howTo, setHowTo] = useState(false);
   const askToSignIn = auth.configured && auth.ready && !auth.signedIn;
 
   useEffect(() => {
@@ -30,6 +36,7 @@ export function Welcome() {
 
   return (
     <>
+      <AmbientLeaves />
       <main className="page page--welcome" id="main">
         <h1 className="visually-hidden">Leaves</h1>
         <p className="welcome__line">{LINE}</p>
@@ -59,8 +66,24 @@ export function Welcome() {
           <button type="button" className="link-button" onClick={() => go("/privacy", { from: "/welcome" })}>
             Privacy
           </button>
+          {!install.installed ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <button type="button" className="link-button" onClick={() => (install.canPrompt ? void promptInstall() : setHowTo(true))}>
+                Install
+              </button>
+            </>
+          ) : null}
         </nav>
       </main>
+      <Dialog open={howTo} onClose={() => setHowTo(false)} title="Install Leaves">
+        <InstallCard />
+        <div className="dialog__actions">
+          <button type="button" className="button" onClick={() => setHowTo(false)}>
+            Close
+          </button>
+        </div>
+      </Dialog>
       <Grass />
     </>
   );

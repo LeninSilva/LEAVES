@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { StarterLine } from "../../shared/starter";
+import { AmbientLeaves } from "../components/AmbientLeaves";
 import { Grass } from "../components/Grass";
 import { PhotoStack } from "../components/PhotoStack";
 import { SteadyButton } from "../components/SteadyButton";
@@ -197,6 +198,7 @@ export function Write({ draftId }: { draftId?: string }) {
 
   return (
     <>
+      <AmbientLeaves still={!empty || canFinish} />
       <TopBar
         left={
           began && canFinish ? (
@@ -220,9 +222,14 @@ export function Write({ draftId }: { draftId?: string }) {
               <p className="opening__quote">{thought.isParaphrase ? thought.quote : `“${thought.quote}”`}</p>
               <Attribution r={thought} />
               {empty ? (
-                <SteadyButton className="text-button opening__another" onPress={() => void anotherThought()}>
-                  Another thought
-                </SteadyButton>
+                <div className="opening__links">
+                  <SteadyButton className="text-button opening__another" onPress={() => void anotherThought()}>
+                    Another thought
+                  </SteadyButton>
+                  <SteadyButton className="text-button opening__another" onPress={() => go(`/voices/${thought.voice}`)}>
+                    More from {thought.author}
+                  </SteadyButton>
+                </div>
               ) : null}
             </div>
           </div>

@@ -36,7 +36,7 @@ export function matches(e: Entry, q: string): boolean {
 }
 
 /** The two-way switch between Entries and Reflections. */
-export function CollectionSwitch({ current }: { current: "entries" | "reflections" }) {
+export function CollectionSwitch({ current }: { current: "entries" | "reflections" | "voices" }) {
   return (
     <nav className="switch" aria-label="Collection">
       <a
@@ -60,6 +60,17 @@ export function CollectionSwitch({ current }: { current: "entries" | "reflection
         }}
       >
         Reflections
+      </a>
+      <a
+        href="/voices"
+        className="switch__option"
+        aria-current={current === "voices" ? "page" : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          if (current !== "voices") go("/voices");
+        }}
+      >
+        Voices
       </a>
     </nav>
   );
