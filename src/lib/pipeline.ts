@@ -183,7 +183,8 @@ async function removeIllustrationBlobs(url: string, thumbUrl: string) {
 
 async function runIllustration(entry: Entry): Promise<"done" | "waiting"> {
   const settings = await getSettings();
-  if (entry.keptFromAI || !settings.illustrations || !entry.scene) {
+  // Quiet and Storybook pictures ship with the app, so only "Drawn for each entry" asks for a picture to be made.
+  if (entry.keptFromAI || !settings.illustrations || !entry.scene || settings.illustrationStyle !== "drawn") {
     await drawFallback(entry, "done");
     return "done";
   }

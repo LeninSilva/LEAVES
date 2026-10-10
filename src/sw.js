@@ -6,16 +6,11 @@ const SHELL = `leaves-shell-${VERSION}`;
 // a page opened before an update can still load the screens it asks for.
 const ASSETS = "leaves-assets";
 const META = "leaves-meta";
-// The drifting leaves are tiny; keep every one so none is missing when offline.
-const LEAVES = ["01-simple-calm", "02-birch-joyful", "03-oak-tender", "04-maple-grateful", "05-ginkgo-hopeful", "06-simple-curious", "07-birch-wistful", "08-oak-restless", "09-maple-tired", "10-ginkgo-heavy"];
-const SHELL_FILES = [
-  "/",
-  "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/art/grass/daylight.svg",
-  "/art/grass/lamplight.svg",
-  ...["daylight", "lamplight"].flatMap((t) => LEAVES.map((n) => `/art/leaves/${t}/${n}.svg`)),
-];
+const SHELL_FILES = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
+// Grass, drifting leaves and the Quiet pictures: small, and needed on most screens. Named by their
+// contents, so a release that doesn't change a picture doesn't download it again.
+const ART = `leaves-art-${"__ART_VERSION__"}`;
+const ART_FILES = __ART__;
 const isAsset = (path) => path.startsWith("/assets/");
 
 self.addEventListener("install", (event) => {
@@ -27,6 +22,11 @@ self.addEventListener("install", (event) => {
       const missing = [];
       for (const url of PRECACHE.filter(isAsset)) if (!(await assets.match(url))) missing.push(url);
       await assets.addAll(missing);
+      const art = await caches.open(ART);
+      const needed = [];
+      for (const url of ART_FILES) if (!(await art.match(url))) needed.push(url);
+      // The art is a nicety: if it can't be fetched now, the app still installs and caches each picture on first use.
+      await art.addAll(needed.map((u) => new Request(u, { cache: "reload" }))).catch(() => undefined);
       await self.skipWaiting();
     })(),
   );
@@ -36,7 +36,9 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k.startsWith("leaves-shell-") && k !== SHELL).map((k) => caches.delete(k)));
+      await Promise.all(
+        keys.filter((k) => (k.startsWith("leaves-shell-") && k !== SHELL) || (k.startsWith("leaves-art-") && k !== ART)).map((k) => caches.delete(k)),
+      );
       // Keep this release's files and the one before; drop anything older.
       const meta = await caches.open(META);
       const prevRes = await meta.match("/previous-assets.json");
@@ -79,7 +81,7 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/licenses/")) return;
   if (req.mode === "navigate") {
     event.respondWith(page(req));
     return;
@@ -89,9 +91,12 @@ self.addEventListener("fetch", (event) => {
       (hit) =>
         hit ||
         fetch(req).then((res) => {
-          if (res.ok && (isAsset(url.pathname) || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/art/"))) {
+          // Only keep what really is the file: a host that answers a missing picture with a page of the app is not a picture.
+          const isPage = (res.headers.get("content-type") || "").includes("text/html");
+          if (res.ok && !isPage && (isAsset(url.pathname) || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/art/"))) {
             const copy = res.clone();
-            caches.open(isAsset(url.pathname) ? ASSETS : SHELL).then((c) => c.put(req, copy));
+            const bucket = isAsset(url.pathname) ? ASSETS : url.pathname.startsWith("/art/") ? ART : SHELL;
+            caches.open(bucket).then((c) => c.put(req, copy));
           }
           return res;
         }),

@@ -1,4 +1,5 @@
-import { useId, useMemo } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { entryArtUrl, entrySubject, subjectAlt, useIllustrationStyle, useResolvedTheme } from "../lib/art";
 import { seeded, range } from "../lib/rng";
 import { useBlobUrl } from "../lib/store";
 import type { Entry } from "../lib/types";
@@ -55,21 +56,51 @@ interface Props {
   variant: "large" | "thumb";
 }
 
+/**
+ * The entry's picture in the chosen style. Quiet and Storybook come from the artwork that
+ * ships with the app, picked by what the entry is about, so the same entry always gets the
+ * same picture. Drawn is the picture made for this entry. If a shipped picture can't be
+ * loaded (offline, before it was ever opened), the entry's own drawing stands in.
+ */
 export function Illustration({ entry, variant }: Props) {
+  const style = useIllustrationStyle();
+  const theme = useResolvedTheme();
+  const subject = entrySubject(entry);
+  const packUrl = style && style !== "drawn" && subject ? entryArtUrl(style, theme, subject, variant) : null;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  useEffect(() => setFailedUrl(null), [packUrl]);
+  const showPack = !!packUrl && failedUrl !== packUrl;
+
   const ref = variant === "thumb" ? entry.illustration?.thumbUrl : entry.illustration?.url;
-  const url = useBlobUrl(ref);
-  const waiting = !entry.illustration;
+  const ownUrl = useBlobUrl(showPack ? null : ref);
+  const waiting = !showPack && (style === null || (style === "drawn" ? !entry.illustration : !subject && !entry.illustration));
+
+  if (showPack && style && style !== "drawn" && subject) {
+    const img = (
+      <img
+        src={packUrl}
+        alt={variant === "thumb" ? "" : subjectAlt(subject, style)}
+        width={512}
+        height={512}
+        loading={variant === "thumb" ? "lazy" : undefined}
+        decoding="async"
+        onError={() => setFailedUrl(packUrl)}
+      />
+    );
+    return <div className={`art art--${style} art--${variant}`}>{img}</div>;
+  }
+
   if (variant === "thumb") {
     return (
       <PaperFrame seed={entry.id} className="paper--thumb">
-        {url ? <img src={url} alt="" loading="lazy" decoding="async" /> : <div className="paper__empty" />}
+        {ownUrl ? <img src={ownUrl} alt="" loading="lazy" decoding="async" /> : <div className="paper__empty" />}
       </PaperFrame>
     );
   }
   return (
     <PaperFrame seed={entry.id} className="paper--large">
-      {url ? (
-        <img src={url} alt={entry.illustration?.alt ?? ""} decoding="async" />
+      {ownUrl ? (
+        <img src={ownUrl} alt={entry.illustration?.alt ?? ""} decoding="async" />
       ) : waiting ? (
         <div className="paper__waiting">
           <BreathingLeaf label="Your drawing is on the way" />

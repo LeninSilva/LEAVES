@@ -3,7 +3,8 @@ import { clearReloadFlag, ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastHost } from "./components/Toast";
 import { BreathingLeaf } from "./components/BreathingLeaf";
 import { mountAnnouncer } from "./lib/announce";
-import { purgeExpiredTrash, sweepBlobs } from "./lib/db";
+import { warmStorybook } from "./lib/art";
+import { getSettings, purgeExpiredTrash, sweepBlobs } from "./lib/db";
 import { resumePending } from "./lib/pipeline";
 import { match, navigate, usePath, useRouteState } from "./lib/router";
 import { useEntry, useMeta, useSettings } from "./lib/store";
@@ -102,6 +103,7 @@ export function App() {
     const tidy = window.setTimeout(() => {
       void purgeExpiredTrash().catch(() => undefined);
       void sweepBlobs().catch(() => undefined);
+      void getSettings().then((s) => (s.illustrationStyle === "storybook" ? warmStorybook() : undefined)).catch(() => undefined);
     }, 8000);
     const online = () => void resumePending();
     window.addEventListener("online", online);

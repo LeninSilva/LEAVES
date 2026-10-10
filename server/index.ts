@@ -31,6 +31,8 @@ if (PROD && existsSync("dist/index.html")) {
     serveStatic({ root: "./dist" }),
   );
   app.use("*", serveStatic({ root: "./dist" }));
+  // A missing picture or file is a plain "not found", not the app: a page of the app is never an image.
+  for (const dir of ["art", "splash", "icons", "licenses", "assets"]) app.get(`/${dir}/*`, (c) => c.notFound());
   // Everything else is a page of the single-page app.
   app.get("*", (c) => c.html(index));
 }

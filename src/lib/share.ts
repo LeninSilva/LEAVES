@@ -1,10 +1,13 @@
+import { entryArtUrl, entrySubject, subjectAlt } from "./art";
+import { CARD_H, CARD_W, FONTS, MARGIN, planCard, type FontKey } from "./cardLayout";
 import { formatStamp } from "./dates";
 import { getBlob, updateEntry } from "./db";
 import { supabase } from "./auth";
 import { entryMarkdown, slug } from "./markdown";
 import { newToken } from "./rng";
 import { paperPath } from "../components/Illustration";
-import type { Entry, Reflection } from "./types";
+import type { ResolvedTheme } from "./theme";
+import type { Entry, IllustrationStyle, Reflection } from "./types";
 
 export { slug };
 
@@ -27,43 +30,19 @@ export async function copyMarkdown(e: Entry, withPlace: boolean): Promise<boolea
 
 // ---- image card -------------------------------------------------------------
 
-const CARD_W = 1080;
-const CARD_H = 1350;
-
 export interface CardOptions {
   image: "illustration" | "photo";
   excerpt: string;
   withReflection: boolean;
   withPlace: boolean;
-  theme: "daylight" | "lamplight";
+  theme: ResolvedTheme;
+  style: IllustrationStyle;
 }
 
 const CARD_COLORS = {
-  daylight: { bg: "#eaf0e3", text: "#2b3326", muted: "#5c6655", line: "#d6dfcc" },
-  lamplight: { bg: "#1e2923", text: "#e9e4d3", muted: "#aeb5a5", line: "#3a463f" },
+  daylight: { bg: "#eaf0e3", text: "#2b3326", muted: "#5c6655", line: "#c9d4bd", shadow: "rgba(43, 51, 38, 0.14)" },
+  lamplight: { bg: "#1e2923", text: "#e9e4d3", muted: "#aeb5a5", line: "#3a463f", shadow: "rgba(0, 0, 0, 0.35)" },
 };
-
-function wrapLines(ctx: CanvasRenderingContext2D, text: string, width: number, maxLines: number): string[] {
-  const out: string[] = [];
-  for (const para of text.split(/\n+/)) {
-    const words = para.split(/\s+/).filter(Boolean);
-    let line = "";
-    for (const w of words) {
-      const test = line ? `${line} ${w}` : w;
-      if (ctx.measureText(test).width > width && line) {
-        out.push(line);
-        line = w;
-      } else line = test;
-      if (out.length >= maxLines) break;
-    }
-    if (line && out.length < maxLines) out.push(line);
-    if (out.length >= maxLines) break;
-  }
-  const total = text.split(/\s+/).filter(Boolean).length;
-  const used = out.join(" ").split(/\s+/).filter(Boolean).length;
-  if (used < total && out.length) out[out.length - 1] = out[out.length - 1].replace(/[\s,.;:]*\S*$/, "") + "…";
-  return out;
-}
 
 async function loadImage(blob: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(blob);
@@ -78,118 +57,158 @@ async function loadImage(blob: Blob): Promise<HTMLImageElement> {
   }
 }
 
-export async function renderCard(e: Entry, o: CardOptions): Promise<Blob> {
+/**
+ * The picture shown with an entry in the chosen style and theme: the artwork that ships with the app,
+ * or the entry's own drawing. If the shipped file can't be fetched (offline, never opened), the own
+ * drawing stands in, so a card or a link can always be made.
+ */
+export async function entryPicture(e: Entry, style: IllustrationStyle, theme: ResolvedTheme): Promise<{ blob: Blob; alt: string; shipped: boolean } | null> {
+  const subject = entrySubject(e);
+  if (style !== "drawn" && subject) {
+    try {
+      const res = await fetch(entryArtUrl(style, theme, subject, "large"));
+      if (res.ok) return { blob: await res.blob(), alt: subjectAlt(subject, style), shipped: true };
+    } catch {
+      /* fall back to the entry's own drawing */
+    }
+  }
+  const own = e.illustration ? await getBlob(e.illustration.url) : undefined;
+  return own && e.illustration ? { blob: own, alt: e.illustration.alt, shipped: false } : null;
+}
+
+/** The card as a PNG. `scale` below 1 makes a small copy for the preview. */
+export async function renderCard(e: Entry, o: CardOptions, scale = 1): Promise<Blob> {
   await Promise.all([
     document.fonts.load('600 56px "Literata"'),
-    document.fonts.load('400 36px "Literata"'),
-    document.fonts.load('italic 400 32px "Literata"'),
+    document.fonts.load('400 34px "Literata"'),
+    document.fonts.load('italic 400 30px "Literata"'),
     document.fonts.load('600 28px "Nunito"'),
   ]).catch(() => undefined);
   const c = CARD_COLORS[o.theme];
   const canvas = document.createElement("canvas");
-  canvas.width = CARD_W;
-  canvas.height = CARD_H;
+  canvas.width = Math.round(CARD_W * scale);
+  canvas.height = Math.round(CARD_H * scale);
   const ctx = canvas.getContext("2d")!;
+  ctx.scale(scale, scale);
   ctx.fillStyle = c.bg;
   ctx.fillRect(0, 0, CARD_W, CARD_H);
 
-  const margin = 96;
-  const inner = CARD_W - margin * 2;
-
-  // Measure the words first, then give the picture the room that is left.
-  ctx.font = '600 56px "Literata", Georgia, serif';
-  const titleLines = wrapLines(ctx, e.title ?? "", inner, 2);
-  ctx.font = '400 34px "Literata", Georgia, serif';
-  const excerptLines = o.excerpt.trim() ? wrapLines(ctx, o.excerpt.trim(), inner, 5) : [];
-  const r = o.withReflection && e.reflection && !e.crisis && e.reflection.quote ? e.reflection : null;
-  ctx.font = 'italic 400 30px "Literata", Georgia, serif';
-  const quoteText = r ? (r.isParaphrase ? r.quote! : `“${r.quote}”`) : "";
-  const quoteLines = r ? wrapLines(ctx, quoteText, inner, 4) : [];
-  // A photo keeps its caption on the card, like a blog post.
+  const measure = (font: FontKey, text: string) => {
+    ctx.font = FONTS[font].css;
+    return ctx.measureText(text).width;
+  };
   const cardPhoto = o.image === "photo" ? e.photos[0] : undefined;
-  ctx.font = 'italic 400 28px "Literata", Georgia, serif';
-  const captionLines = cardPhoto?.caption.trim() ? wrapLines(ctx, cardPhoto.caption.trim().replace(/\s+/g, " "), inner, 2) : [];
-  const captionHeight = captionLines.length ? 20 + captionLines.length * 40 : 0;
+  const reflection = o.withReflection && e.reflection && !e.crisis && e.reflection.quote ? e.reflection : null;
+  const picture = cardPhoto
+    ? await getBlob(cardPhoto.url).then((blob) => (blob ? { blob, shipped: false } : null))
+    : o.image === "illustration"
+      ? await entryPicture(e, o.style, o.theme)
+      : null;
+  const plan = planCard(measure, {
+    title: e.title ?? "",
+    stamp: formatStamp(e, { withPlace: o.withPlace }),
+    excerpt: o.excerpt,
+    caption: cardPhoto?.caption ?? "",
+    quote: reflection ? (reflection.isParaphrase ? reflection.quote! : `“${reflection.quote}”`) : "",
+    source: reflection?.author ? `${reflection.isParaphrase ? "after " : ""}${reflection.author}${reflection.source ? `, ${reflection.source}` : ""}` : "",
+    hasPicture: !!picture,
+  });
 
-  const textHeight =
-    titleLines.length * 68 +
-    24 +
-    40 +
-    captionHeight +
-    (excerptLines.length ? 32 + excerptLines.length * 52 : 0) +
-    (quoteLines.length ? 48 + quoteLines.length * 44 + 44 : 0);
-  const imageSize = Math.max(360, Math.min(inner, CARD_H - margin * 2 - textHeight - 48));
-
-  const ref = cardPhoto ? cardPhoto.url : e.illustration?.url;
-  const blob = ref ? await getBlob(ref) : undefined;
-  let y = margin;
-  if (blob) {
-    const img = await loadImage(blob);
-    const x = (CARD_W - imageSize) / 2;
+  ctx.textBaseline = "top";
+  let y = MARGIN;
+  if (picture && plan.imageSize > 0) {
+    const img = await loadImage(picture.blob);
+    const size = plan.imageSize;
+    const x = (CARD_W - size) / 2;
     ctx.save();
-    if (o.image === "photo") {
-      const radius = 48;
-      ctx.beginPath();
-      ctx.roundRect(x, y, imageSize, imageSize, radius);
-      ctx.clip();
+    if (picture.shipped) {
+      // The shipped pictures have their own paper edges; they only need lifting off the page.
+      ctx.shadowColor = c.shadow;
+      ctx.shadowBlur = 28;
+      ctx.shadowOffsetY = 8;
+      ctx.drawImage(img, x, y, size, size);
     } else {
-      const path = new Path2D();
-      const m = new DOMMatrix([imageSize, 0, 0, imageSize, x, y]);
-      path.addPath(new Path2D(paperPath(e.id)), m);
-      ctx.clip(path);
+      if (cardPhoto) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, size, size, 48);
+        ctx.clip();
+      } else {
+        const path = new Path2D();
+        path.addPath(new Path2D(paperPath(e.id)), new DOMMatrix([size, 0, 0, size, x, y]));
+        ctx.clip(path);
+      }
+      const s = Math.max(size / img.naturalWidth, size / img.naturalHeight);
+      const w = img.naturalWidth * s;
+      const h = img.naturalHeight * s;
+      ctx.drawImage(img, x + (size - w) / 2, y + (size - h) / 2, w, h);
     }
-    // cover-fit
-    const s = Math.max(imageSize / img.naturalWidth, imageSize / img.naturalHeight);
-    const w = img.naturalWidth * s;
-    const h = img.naturalHeight * s;
-    ctx.drawImage(img, x + (imageSize - w) / 2, y + (imageSize - h) / 2, w, h);
     ctx.restore();
-    y += imageSize;
-    if (captionLines.length) {
+    y += size;
+    if (plan.caption.length) {
       y += 20;
-      ctx.textBaseline = "top";
       ctx.fillStyle = c.muted;
-      ctx.font = 'italic 400 28px "Literata", Georgia, serif';
-      for (const line of captionLines) {
-        ctx.fillText(line, margin, y);
-        y += 40;
+      ctx.font = FONTS.caption.css;
+      for (const line of plan.caption) {
+        ctx.fillText(line, MARGIN, y);
+        y += FONTS.caption.line;
       }
     }
     y += 48;
   }
 
-  ctx.textBaseline = "top";
   ctx.fillStyle = c.text;
-  ctx.font = '600 56px "Literata", Georgia, serif';
-  for (const line of titleLines) {
-    ctx.fillText(line, margin, y);
-    y += 68;
+  ctx.font = FONTS.title.css;
+  for (const line of plan.title) {
+    ctx.fillText(line, MARGIN, y);
+    y += FONTS.title.line;
   }
   y += 16;
   ctx.fillStyle = c.muted;
-  ctx.font = '600 28px "Nunito", system-ui, sans-serif';
-  ctx.fillText(formatStamp(e, { withPlace: o.withPlace }), margin, y);
-  y += 40;
-  if (excerptLines.length) {
+  ctx.font = FONTS.stamp.css;
+  const stamp = formatStamp(e, { withPlace: o.withPlace });
+  if (stamp) {
+    ctx.fillText(stamp, MARGIN, y);
+    y += FONTS.stamp.line;
+  }
+  if (plan.excerpt.length) {
     y += 32;
     ctx.fillStyle = c.text;
-    ctx.font = '400 34px "Literata", Georgia, serif';
-    for (const line of excerptLines) {
-      ctx.fillText(line, margin, y);
-      y += 52;
+    ctx.font = FONTS.excerpt.css;
+    for (const line of plan.excerpt) {
+      ctx.fillText(line, MARGIN, y);
+      y += FONTS.excerpt.line;
     }
   }
-  if (r) {
-    y += 48;
+  if (plan.quote.length) {
+    y += 22;
+    ctx.fillStyle = c.line;
+    ctx.fillRect(MARGIN, y, 64, 3);
+    y += 22;
     ctx.fillStyle = c.text;
-    ctx.font = 'italic 400 30px "Literata", Georgia, serif';
-    for (const line of quoteLines) {
-      ctx.fillText(line, margin, y);
-      y += 44;
+    ctx.font = FONTS[plan.quoteFont].css;
+    for (const line of plan.quote) {
+      ctx.fillText(line, MARGIN, y);
+      y += FONTS[plan.quoteFont].line;
     }
-    ctx.fillStyle = c.muted;
-    ctx.font = '600 24px "Nunito", system-ui, sans-serif';
-    ctx.fillText(`${r.isParaphrase ? "after " : ""}${r.author ?? ""}`, margin, y + 6);
+    if (plan.source) {
+      y += 8;
+      ctx.fillStyle = c.muted;
+      ctx.font = FONTS.source.css;
+      ctx.fillText(plan.source, MARGIN, y);
+    }
+  }
+
+  // A strip of grass along the foot, as on the Write screen.
+  try {
+    const res = await fetch(`/art/grass/${o.theme}.svg`);
+    if (res.ok) {
+      const grass = await loadImage(await res.blob());
+      const h = 56;
+      const w = (grass.naturalWidth / grass.naturalHeight) * h;
+      for (let gx = 0; gx < CARD_W; gx += w) ctx.drawImage(grass, gx, CARD_H - h, w, h);
+    }
+  } catch {
+    /* the card is complete without it */
   }
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("card"))), "image/png"));
 }
@@ -235,9 +254,9 @@ export interface SharedSnapshot {
   reflection: Pick<Reflection, "quote" | "author" | "source" | "isParaphrase" | "bridge"> | null;
 }
 
-async function uploadShared(uid: string, token: string, name: string, ref: string | undefined): Promise<string | null> {
+async function uploadShared(uid: string, token: string, name: string, ref: string | Blob | undefined): Promise<string | null> {
   if (!ref) return null;
-  const blob = await getBlob(ref);
+  const blob = typeof ref === "string" ? await getBlob(ref) : ref;
   if (!blob) return null;
   const sb = (await supabase())!;
   const ext = blob.type.includes("svg") ? "svg" : blob.type.includes("webp") ? "webp" : "jpg";
@@ -260,6 +279,9 @@ export interface SnapshotOptions {
   withPhoto: boolean;
   withReflection: boolean;
   withPlace: boolean;
+  /** The picture the writer sees on the entry, so a shared page shows the same one. */
+  style: IllustrationStyle;
+  theme: ResolvedTheme;
 }
 
 async function makeShare(e: Entry, kind: "link" | "published", o: SnapshotOptions): Promise<string> {
@@ -271,13 +293,14 @@ async function makeShare(e: Entry, kind: "link" | "published", o: SnapshotOption
   // Replace any earlier share of the same kind for this entry.
   await removeShare(e, kind);
   const token = newToken();
+  const picture = await entryPicture(e, o.style, o.theme);
   const snapshot: SharedSnapshot = {
     title: e.title ?? "Untitled",
     text: e.text,
     stamp: formatStamp(e, { withPlace: o.withPlace }),
     finishedAt: e.finishedAt ?? "",
-    illustrationUrl: await uploadShared(uid, token, "illustration", e.illustration?.url),
-    illustrationAlt: e.illustration?.alt ?? "",
+    illustrationUrl: await uploadShared(uid, token, "illustration", picture?.blob),
+    illustrationAlt: picture?.alt ?? "",
     photos: o.withPhoto ? await uploadSharedPhotos(uid, token, e) : [],
     reflection:
       o.withReflection && e.reflection && !e.crisis

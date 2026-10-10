@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useResolvedTheme } from "../lib/art";
 import { cloudConfigured, useAuth } from "../lib/auth";
 import {
   copyMarkdown,
@@ -35,6 +36,12 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
   const [note, setNote] = useState<string | null>(null);
   const [handle, setHandle] = useState<string | null>(null);
   const [handleDraft, setHandleDraft] = useState("");
+  const appTheme = useResolvedTheme();
+  // The card starts in the colors the app is showing; it can be made in either.
+  const [cardTheme, setCardTheme] = useState<"daylight" | "lamplight" | null>(null);
+  const theme = cardTheme ?? appTheme;
+  const style = settings.illustrationStyle;
+  const [preview, setPreview] = useState<{ url: string; failed: boolean } | null>(null);
 
   useEffect(() => setWithPlace(settings.sharePlace), [settings.sharePlace]);
   useEffect(() => {
@@ -55,9 +62,53 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
     }
   };
 
-  const theme = document.documentElement.dataset.theme === "lamplight" ? "lamplight" : "daylight";
   const cloudReady = cloudConfigured && auth.signedIn;
-  const snap = { withPhoto, withReflection, withPlace };
+  const snap = { withPhoto, withReflection, withPlace, style, theme: appTheme };
+  const cardOptions = useMemo(
+    () => ({ image, excerpt, withReflection, withPlace, theme, style }),
+    [image, excerpt, withReflection, withPlace, theme, style],
+  );
+
+  // A small copy of the card, redrawn a moment after anything changes, so what is shared is no surprise.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    let made: string | null = null;
+    const timer = window.setTimeout(async () => {
+      try {
+        const blob = await renderCard(entry, cardOptions, 0.4);
+        if (cancelled) return;
+        made = URL.createObjectURL(blob);
+        setPreview((old) => {
+          if (old?.url) URL.revokeObjectURL(old.url);
+          return { url: made!, failed: false };
+        });
+      } catch {
+        if (!cancelled) setPreview({ url: "", failed: true });
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [open, entry, cardOptions]);
+  // Let go of the preview's memory when the dialog closes or goes away.
+  const latest = useRef<string | null>(null);
+  latest.current = preview?.url || null;
+  useEffect(() => {
+    if (!open) {
+      setPreview((old) => {
+        if (old?.url) URL.revokeObjectURL(old.url);
+        return null;
+      });
+    }
+  }, [open]);
+  useEffect(
+    () => () => {
+      if (latest.current) URL.revokeObjectURL(latest.current);
+    },
+    [],
+  );
   const link = entry.share.linkToken ? shareUrl(entry.share.linkToken) : null;
 
   return (
@@ -75,6 +126,19 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
               ))}
             </div>
           ) : null}
+          <div className="field">
+            <span className="field__label" id="card-colors">
+              Card colors
+            </span>
+            <div className="segmented" role="radiogroup" aria-labelledby="card-colors">
+              {(["daylight", "lamplight"] as const).map((v) => (
+                <label key={v} className="segmented__option">
+                  <input type="radio" name="card-theme" value={v} checked={theme === v} onChange={() => setCardTheme(v)} />
+                  <span>{v === "daylight" ? "Daylight" : "Lamplight"}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <label className="field">
             <span className="field__label">Words to show</span>
             <textarea className="input input--short" rows={3} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
@@ -91,13 +155,23 @@ export function ShareDialog({ entry, open, onClose }: { entry: Entry; open: bool
           ) : null}
         </fieldset>
 
+        <div className="share__preview">
+          {preview?.url ? (
+            <img src={preview.url} alt="Preview of your card" width={432} height={540} />
+          ) : (
+            <p className="field-note" role="status">
+              {preview?.failed ? "Couldn't draw a preview. You can still share the image." : "Drawing a preview"}
+            </p>
+          )}
+        </div>
+
         <button
           type="button"
           className="button"
           disabled={!!busy}
           onClick={() =>
             run("image", async () => {
-              const blob = await renderCard(entry, { image, excerpt, withReflection, withPlace, theme });
+              const blob = await renderCard(entry, cardOptions);
               const result = await shareFile(blob, `${slug(entry.title ?? "entry")}.png`, entry.title ?? "Leaves");
               if (result === "downloaded") return "Saved the image to your downloads.";
             })

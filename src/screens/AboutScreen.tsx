@@ -73,6 +73,16 @@ export function AboutScreen() {
             How AI is used
           </button>
         </div>
+
+        <h2 className="section-title">Credits</h2>
+        <p>
+          The drawings, leaves, tree and launch pictures were made for Leaves. Words are set in Literata, Nunito and Atkinson
+          Hyperlegible, which are free to use under the SIL Open Font License.{" "}
+          <a href="/licenses/fonts.txt" target="_blank" rel="noreferrer">
+            Read the licenses
+          </a>
+          .
+        </p>
       </main>
     </>
   );

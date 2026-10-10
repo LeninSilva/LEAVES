@@ -5,7 +5,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/:route*", "destination": "/api?__route=:route*" },
-    { "source": "/((?!api/|api$|assets/|icons/|sw\\.js|manifest\\.webmanifest|robots\\.txt).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|api$|assets/|icons/|art/|splash/|licenses/|sw\\.js|manifest\\.webmanifest|robots\\.txt).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

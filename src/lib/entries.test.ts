@@ -76,6 +76,21 @@ describe("reading an entry on the device", () => {
     expect(["boat", "birds", "paper boat", "stones", "lighthouse"]).toContain(sea.subject);
   });
 
+  it("usually draws the thing the entry names", () => {
+    const cases: [string, string][] = [
+      ["We rowed the little boat out across the lake at dawn.", "boat"],
+      ["Crossed the old stone bridge on the way home.", "bridge"],
+      ["Sat on the bench by the water and watched the lighthouse.", "lighthouse"],
+      ["A fox crossed the path behind the house this morning.", "fox"],
+      ["Lit a candle and read for an hour.", "candle"],
+    ];
+    for (const [text, subject] of cases) {
+      let hits = 0;
+      for (let i = 0; i < 60; i++) if (sceneFromText(text, { seed: `entry-${i}` }).subject === subject) hits++;
+      expect(hits, text).toBeGreaterThanOrEqual(30);
+    }
+  });
+
   it("gives the same words the same picture, and Draw again a new one", () => {
     const a = sceneFromText("A quiet walk in the park.", { seed: "x" });
     expect(sceneFromText("A quiet walk in the park.", { seed: "x" })).toEqual(a);

@@ -11,6 +11,7 @@ import { BreathingLeaf } from "../components/BreathingLeaf";
 import { showToast } from "../components/Toast";
 import { NavLink, TopBar } from "../components/TopBar";
 import { announce } from "../lib/announce";
+import { useIllustrationStyle } from "../lib/art";
 import { cloudConfigured, useAuth } from "../lib/auth";
 import { restoreFromTrash, saveMeta } from "../lib/db";
 import { drawAgain, newReflection } from "../lib/pipeline";
@@ -48,8 +49,10 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
     }
   }, [entry.steps.reflection, entry.reflection]);
 
-  const owed = entry.steps.reflection !== "done" || !entry.illustration;
-  const drawingFailed = entry.steps.illustration === "failed";
+  // Only "Drawn for each entry" waits for a picture; Quiet and Storybook are ready at once.
+  const ownDrawing = useIllustrationStyle() === "drawn";
+  const owed = entry.steps.reflection !== "done" || (ownDrawing && !entry.illustration);
+  const drawingFailed = ownDrawing && entry.steps.illustration === "failed";
 
   const onDelete = async () => {
     setConfirmDelete(false);
@@ -79,7 +82,7 @@ export function EntryScreen({ entry, justFinished }: { entry: Entry; justFinishe
               items={[
                 { label: "Edit", onSelect: () => go(`/entry/${entry.id}/edit`) },
                 { label: "Share", onSelect: () => setSharing(true) },
-                { label: "Draw again", onSelect: () => void drawAgain(entry.id) },
+                { label: "Draw again", onSelect: () => void drawAgain(entry.id), hidden: !ownDrawing },
                 { label: "New reflection", onSelect: () => void newReflection(entry.id), hidden: entry.crisis },
                 { label: "Delete", onSelect: () => setConfirmDelete(true) },
               ]}

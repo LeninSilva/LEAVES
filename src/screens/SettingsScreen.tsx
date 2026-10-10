@@ -7,6 +7,7 @@ import { NavLink, TopBar } from "../components/TopBar";
 import { showToast } from "../components/Toast";
 import { cloudConfigured, useAuth } from "../lib/auth";
 import { formatClock } from "../lib/dates";
+import { warmStorybook } from "../lib/art";
 import { saveSettings, wipeLocal } from "../lib/db";
 import { disableReminder, enableReminder } from "../lib/reminder";
 import { go, navigate } from "../lib/router";
@@ -14,7 +15,7 @@ import { downloadBlob, shareFile } from "../lib/share";
 import { formatBytes, protectStorage, useStorageReport } from "../lib/storage";
 import { useMeta, useSettings } from "../lib/store";
 import { deleteRemoteEverything } from "../lib/sync";
-import type { PlaceMode, TextSize, ThemeSetting, WritingFont } from "../lib/types";
+import type { IllustrationStyle, PlaceMode, TextSize, ThemeSetting, WritingFont } from "../lib/types";
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   const id = `g-${title.replace(/\W+/g, "-").toLowerCase()}`;
@@ -151,6 +152,21 @@ export function SettingsScreen() {
               { value: "lamplight", label: "Lamplight" },
             ]}
           />
+          <Choice<IllustrationStyle>
+            legend="Entry pictures"
+            hint="Quiet is a simple line drawing. Storybook is a painted scene. Drawn for each entry is a picture made from what you wrote. All three follow your theme."
+            value={s.illustrationStyle}
+            onChange={(illustrationStyle) => {
+              set({ illustrationStyle });
+              // Keep the painted scenes available offline once someone has chosen them.
+              if (illustrationStyle === "storybook") void warmStorybook();
+            }}
+            options={[
+              { value: "quiet", label: "Quiet" },
+              { value: "storybook", label: "Storybook" },
+              { value: "drawn", label: "Drawn for each entry" },
+            ]}
+          />
           <Toggle
             label="Warm evenings"
             hint={`With the Automatic theme, switch to Lamplight from ${formatClock(s.warmEveningsFrom)} to ${formatClock(s.warmEveningsTo)}.`}
@@ -201,7 +217,7 @@ export function SettingsScreen() {
           <Toggle label="Reflections" hint="A short thought after you finish." checked={s.reflections} onChange={(reflections) => set({ reflections })} />
           <Toggle
             label="Illustrations made with AI"
-            hint="When off, each entry gets a simple drawing made on your phone."
+            hint="Only for Drawn for each entry. When off, that picture is a simple drawing made on your phone."
             checked={s.illustrations}
             onChange={(illustrations) => set({ illustrations })}
           />

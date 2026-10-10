@@ -36,6 +36,7 @@ export function Welcome() {
 
   return (
     <>
+      <div className="welcome-backdrop" aria-hidden="true" />
       <AmbientLeaves />
       <main className="page page--welcome" id="main">
         <h1 className="visually-hidden">Leaves</h1>

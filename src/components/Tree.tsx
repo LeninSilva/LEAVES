@@ -3,127 +3,109 @@ import type { Mood } from "../../shared/constants";
 import { hashString, range, seeded } from "../lib/rng";
 import { moodVar } from "../lib/moods";
 import { LEAF_PATH, LEAF_VEIN } from "./LeafShape";
+import { BRANCH_PATHS, STAGES, TRUNK_PATH } from "./treeStages";
 
 /**
- * The tree. Each finished entry is one leaf in its mood color. The shape is a
- * pure function of the leaves, so it looks the same on every visit. New
- * branches grow every 20 to 30 leaves, the tree grows a little taller as it
- * fills, and nothing ever withers.
+ * The tree. Each finished entry is one leaf in its mood color: leaf 1 is the oldest entry, so a leaf
+ * never moves when a newer one arrives. The trunk and branches are the supplied growth pictures;
+ * the stage follows how many entries there are (bare, then 1, 5, 12, 24, 48, 80 and 120 leaves). Their
+ * leaves are only places to hang a leaf, so the tree always has exactly as many leaves as entries.
+ * Past 120 the last tree keeps filling, a little fuller each time. Nothing ever withers.
  */
 
-const W = 400;
-const H = 300;
-const BASE_X = 200;
-const BASE_Y = 272;
-const FIRST_BRANCHES = 3;
-const MAX_BRANCHES = 16;
+/** The pictures' own space: the trunk stands on (BASE_X, BASE_Y) in a 512 x 512 square. */
+const BASE_X = 256;
+const BASE_Y = 466;
+/** The leaf shape is 20 long; this is the size the supplied pictures draw it at. */
+const LEAF_SCALE = 1.8;
 
-interface Segment {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-  width: number;
-  depth: number;
+/** How many leaves each stage holds: 0, 1, 5, 12, 24, 48, 80, 120. */
+export const STAGE_LEAVES: readonly number[] = STAGES.map((s) => s.slots.length);
+const LAST = STAGES.length - 1;
+const FULL = STAGE_LEAVES[LAST];
+
+/** The first stage with room for this many leaves; the last stage for anything beyond it. */
+export function stageFor(count: number): number {
+  const k = STAGE_LEAVES.findIndex((room) => room >= count);
+  return k === -1 ? LAST : k;
 }
 
-/** Leaf count at which branch k appears. */
-export function branchThresholds(): number[] {
-  const t: number[] = [];
-  let at = 0;
-  for (let k = 0; k < MAX_BRANCHES; k++) {
-    if (k < FIRST_BRANCHES) t.push(0);
-    else {
-      at += Math.round(range(seeded(`branch-gap-${k}`), 20, 30));
-      t.push(at);
-    }
-  }
-  return t;
+export interface TreeLeaf {
+  x: number;
+  y: number;
+  rot: number;
 }
 
-const THRESHOLDS = branchThresholds();
+/** The centre of the full canopy, which later leaves are pushed out from. */
+const CANOPY = (() => {
+  const slots = STAGES[LAST].slots;
+  return { x: slots.reduce((n, p) => n + p[0], 0) / slots.length, y: slots.reduce((n, p) => n + p[1], 0) / slots.length };
+})();
 
-export function branchCount(leaves: number): number {
-  return THRESHOLDS.filter((t) => t <= leaves).length;
-}
-
-/** Where each main branch leaves the trunk: fraction of trunk height, side, and angle. */
-const SITES = Array.from({ length: MAX_BRANCHES }, (_, k) => {
-  const rand = seeded(`site-${k}`);
-  if (k === 2) return { at: 1, angle: -90 + range(rand, -8, 8), length: 0.95 };
-  const left = k % 2 === 0;
-  const at = k < 2 ? range(rand, 0.55, 0.68) : range(rand, 0.35, 0.95);
-  const angle = left ? range(rand, -158, -122) : range(rand, -58, -22);
-  return { at, angle, length: range(rand, 0.75, 1) };
-});
-
-function growBranch(k: number, x: number, y: number, angleDeg: number, len: number, width: number): Segment[] {
-  const rand = seeded(`branch-${k}`);
-  const segs: Segment[] = [];
-  const step = (x0: number, y0: number, a: number, l: number, w: number, depth: number) => {
-    const rad = (a * Math.PI) / 180;
-    const x1 = x0 + Math.cos(rad) * l;
-    const y1 = y0 + Math.sin(rad) * l;
-    segs.push({ x0, y0, x1, y1, width: w, depth });
-    if (depth >= 3) return;
-    const kids = depth === 0 ? 3 : 2;
-    for (let i = 0; i < kids; i++) {
-      const spread = (i - (kids - 1) / 2) * range(rand, 24, 36);
-      // Branches lean gently upward, toward the light.
-      const lift = a < -90 ? 6 : a > -90 ? -6 : 0;
-      step(x1, y1, a + spread + lift, l * range(rand, 0.58, 0.72), Math.max(1.2, w * 0.62), depth + 1);
-    }
+/** Where leaf i hangs, in the pictures' space, before the stage's size is applied. */
+export function leafSlot(stage: number, i: number): TreeLeaf {
+  const slots = STAGES[stage].slots;
+  if (i < slots.length) return { x: slots[i][0], y: slots[i][1], rot: slots[i][2] };
+  // Beyond the last supplied tree: start from one of its places and drift outward, the same way every time.
+  const base = STAGES[LAST].slots[(i * 53) % FULL]; // 53 shares no factor with 120, so every place is used in turn
+  const rand = seeded(hashString(`leaf-${i}`));
+  const push = Math.min(34, (i - FULL + 1) * 0.12);
+  const away = Math.atan2(base[1] - CANOPY.y, base[0] - CANOPY.x);
+  return {
+    x: base[0] + range(rand, -14, 14) + Math.cos(away) * push,
+    y: base[1] + range(rand, -14, 14) + Math.sin(away) * push,
+    rot: base[2] + range(rand, -60, 60),
   };
-  step(x, y, angleDeg, len, width, 0);
-  return segs;
 }
 
-interface Layout {
-  trunk: Segment;
-  branches: Segment[][];
-  leaves: { x: number; y: number; rot: number; scale: number }[];
+/** Every number pair in a path of absolute commands. */
+function points(d: string): [number, number][] {
+  const n = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  return Array.from({ length: Math.floor(n.length / 2) }, (_, k) => [n[2 * k], n[2 * k + 1]] as [number, number]);
+}
+const SKELETON = [TRUNK_PATH, ...BRANCH_PATHS].flatMap(points);
+
+export interface Layout {
+  stage: number;
+  /** How large this stage is drawn about the foot of the trunk. */
+  scale: number;
+  /** In the pictures' space. */
+  leaves: TreeLeaf[];
+  /** The part of the 512-square to show, grown to fit. */
+  view: { x: number; y: number; w: number; h: number };
 }
 
-export function layoutTree(leafCount: number): Layout {
-  const branches = Math.max(FIRST_BRANCHES, branchCount(leafCount));
-  const growth = Math.min(1, 0.62 + 0.03 * branches + Math.min(leafCount, 60) * 0.002);
-  const trunkLen = 118 * growth;
-  const trunk: Segment = { x0: BASE_X, y0: BASE_Y, x1: BASE_X, y1: BASE_Y - trunkLen, width: 13 * growth, depth: 0 };
-  const branchSegs: Segment[][] = [];
-  for (let k = 0; k < branches; k++) {
-    const s = SITES[k];
-    const y = BASE_Y - trunkLen * s.at;
-    const bend = (k % 2 === 0 ? -1 : 1) * 1.5;
-    branchSegs.push(growBranch(k, BASE_X + bend, y, s.angle, 62 * growth * s.length, 7 * growth * (1 - s.at * 0.35)));
+const LEAF_REACH = (LEAF_SCALE * 10) + 3;
+const MARGIN = 12;
+
+/** A pure function of the number of entries, so the tree looks the same on every visit. */
+export function layoutTree(count: number): Layout {
+  const stage = stageFor(count);
+  const { scale } = STAGES[stage];
+  const leaves = Array.from({ length: count }, (_, i) => leafSlot(stage, i));
+  // Where things end up on the page once the stage's size is applied about the foot of the trunk.
+  const place = (x: number, y: number): [number, number] => [BASE_X + (x - BASE_X) * scale, BASE_Y + (y - BASE_Y) * scale];
+  const reach = LEAF_REACH * scale;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  for (const [x, y] of SKELETON) {
+    const [px, py] = place(x, y);
+    minX = Math.min(minX, px);
+    maxX = Math.max(maxX, px);
+    minY = Math.min(minY, py);
   }
-  const leaves: Layout["leaves"] = [];
-  for (let i = 0; i < leafCount; i++) {
-    // A leaf belongs to one of the branches that existed when it arrived.
-    const available = Math.max(FIRST_BRANCHES, branchCount(i));
-    const h = hashString(`leaf-${i}`);
-    const b = branchSegs[h % available];
-    const twigs = b.filter((s) => s.depth >= 2);
-    const seg = twigs[(h >>> 8) % twigs.length];
-    const rand = seeded(h);
-    const t = range(rand, 0.35, 1);
-    const along = Math.atan2(seg.y1 - seg.y0, seg.x1 - seg.x0);
-    const side = rand() < 0.5 ? -1 : 1;
-    const off = range(rand, 2, 7) * side;
-    leaves.push({
-      x: seg.x0 + (seg.x1 - seg.x0) * t + Math.cos(along + Math.PI / 2) * off,
-      y: seg.y0 + (seg.y1 - seg.y0) * t + Math.sin(along + Math.PI / 2) * off,
-      rot: (along * 180) / Math.PI + 90 + side * range(rand, 25, 60),
-      scale: range(rand, 0.72, 0.95),
-    });
+  for (const l of leaves) {
+    const [px, py] = place(l.x, l.y);
+    minX = Math.min(minX, px - reach);
+    maxX = Math.max(maxX, px + reach);
+    minY = Math.min(minY, py - reach);
   }
-  return { trunk, branches: branchSegs, leaves };
-}
-
-function segPath(s: Segment) {
-  // A slight curve so branches feel drawn by hand.
-  const mx = (s.x0 + s.x1) / 2 + (s.y1 - s.y0) * 0.08;
-  const my = (s.y0 + s.y1) / 2 - (s.x1 - s.x0) * 0.08;
-  return `M${s.x0.toFixed(1)},${s.y0.toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${s.x1.toFixed(1)},${s.y1.toFixed(1)}`;
+  const half = Math.max(BASE_X - minX, maxX - BASE_X, 150) + MARGIN;
+  const w = half * 2;
+  const bottom = BASE_Y + 24;
+  const top = Math.min(minY - MARGIN, bottom - w * 0.72);
+  return { stage, scale, leaves, view: { x: BASE_X - half, y: top, w, h: bottom - top } };
 }
 
 interface Props {
@@ -132,6 +114,8 @@ interface Props {
   seenCount: number;
   onSeen?: (count: number) => void;
 }
+
+const fmt = (n: number) => n.toFixed(1);
 
 export function Tree({ moods, seenCount, onSeen }: Props) {
   const count = moods.length;
@@ -148,37 +132,33 @@ export function Tree({ moods, seenCount, onSeen }: Props) {
   }, [unfurl, count, onSeen]);
 
   const label = `Your tree has ${count} ${count === 1 ? "leaf" : "leaves"}.`;
-  const all = [layout.trunk, ...layout.branches.flat()];
+  const { view, scale } = layout;
+  const groundRx = Math.max(70, view.w * 0.38);
 
   return (
     <div className="tree">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
-        <path
-          d={`M60,${BASE_Y + 6} Q200,${BASE_Y - 14} 340,${BASE_Y + 6} Q200,${BASE_Y + 22} 60,${BASE_Y + 6} Z`}
-          fill="var(--color-grass)"
-        />
-        <g stroke="var(--color-bark-line)" strokeLinecap="round" fill="none">
-          {all.map((s, i) => (
-            <path key={`o${i}`} d={segPath(s)} strokeWidth={s.width + 2.2} />
-          ))}
-        </g>
-        <g stroke="var(--color-trunk)" strokeLinecap="round" fill="none">
-          {all.map((s, i) => (
-            <path key={`i${i}`} d={segPath(s)} strokeWidth={s.width} />
-          ))}
-        </g>
-        <g>
-          {layout.leaves.map((l, i) => {
-            const isNew = unfurl && i === count - 1;
-            return (
-              <g key={i} transform={`translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) rotate(${l.rot.toFixed(0)}) scale(${(l.scale * 0.9).toFixed(2)})`}>
-                <g className={isNew ? "tree__leaf tree__leaf--new" : "tree__leaf"}>
-                  <path d={LEAF_PATH} fill={moodVar(moods[i])} stroke="var(--color-bark-line)" strokeWidth="1.3" strokeLinejoin="round" />
-                  <path d={LEAF_VEIN} stroke="var(--color-bark-line)" strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
+      <svg viewBox={`${fmt(view.x)} ${fmt(view.y)} ${fmt(view.w)} ${fmt(view.h)}`} role="img" aria-label={label}>
+        <ellipse cx={BASE_X} cy={BASE_Y + 6} rx={groundRx} ry={10} fill="var(--color-grass)" />
+        <g transform={`translate(${BASE_X} ${BASE_Y}) scale(${scale}) translate(${-BASE_X} ${-BASE_Y})`}>
+          <path d={TRUNK_PATH} fill="var(--color-trunk)" stroke="var(--color-bark-line)" strokeWidth={3} strokeLinejoin="round" />
+          <g fill="none" stroke="var(--color-trunk)" strokeWidth={8} strokeLinecap="round" strokeLinejoin="round">
+            {BRANCH_PATHS.map((d) => (
+              <path key={d} d={d} />
+            ))}
+          </g>
+          <g>
+            {layout.leaves.map((l, i) => {
+              const isNew = unfurl && i === count - 1;
+              return (
+                <g key={i} transform={`translate(${fmt(l.x)} ${fmt(l.y)}) rotate(${Math.round(l.rot)}) scale(${LEAF_SCALE})`}>
+                  <g className={isNew ? "tree__leaf tree__leaf--new" : "tree__leaf"}>
+                    <path d={LEAF_PATH} fill={moodVar(moods[i])} stroke="var(--color-bark-line)" strokeWidth="1.2" strokeLinejoin="round" />
+                    <path d={LEAF_VEIN} fill="none" stroke="var(--color-bark-line)" strokeWidth="0.9" strokeLinecap="round" opacity="0.7" />
+                  </g>
                 </g>
-              </g>
-            );
-          })}
+              );
+            })}
+          </g>
         </g>
       </svg>
     </div>

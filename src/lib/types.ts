@@ -82,6 +82,8 @@ export type ThemeSetting = "automatic" | "daylight" | "lamplight";
 export type PlaceMode = "off" | "ask" | "auto";
 export type TextSize = "small" | "default" | "large" | "larger";
 export type WritingFont = "literata" | "atkinson";
+/** Quiet: simple line pictures. Storybook: painted scenes. Drawn: a picture made for each entry. */
+export type IllustrationStyle = "quiet" | "storybook" | "drawn";
 
 export interface Settings {
   theme: ThemeSetting;
@@ -92,6 +94,7 @@ export interface Settings {
   textSize: TextSize;
   writingFont: WritingFont;
   reduceMotion: boolean;
+  illustrationStyle: IllustrationStyle;
   openingThought: boolean;
   questions: boolean;
   reflections: boolean;
@@ -114,6 +117,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textSize: "default",
   writingFont: "literata",
   reduceMotion: false,
+  illustrationStyle: "quiet",
   openingThought: true,
   questions: true,
   reflections: true,

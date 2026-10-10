@@ -116,6 +116,15 @@ const THING_SUBJECTS: [RegExp, Subject][] = [
   [/\b(moon|moonlight)\b/i, "moon"],
   [/\b(fox|foxes)\b/i, "fox"],
   [/\b(umbrella)\b/i, "umbrella"],
+  [/\b(boats?|rowboat|canoe|kayak|sailboat|rowed|rowing)\b/i, "boat"],
+  [/\b(bridges?)\b/i, "bridge"],
+  [/\b(bench(es)?)\b/i, "bench"],
+  [/\b(mountains?|summit)\b/i, "mountain"],
+  [/\b(lantern|lamplight)\b/i, "lantern"],
+  [/\b(nest|nests)\b/i, "nest"],
+  [/\b(sapling|seedling)\b/i, "sapling"],
+  [/\b(flowers?|bouquet|blossoms?)\b/i, "flowers"],
+  [/\b(trees?|oak|maple|birch|willow)\b/i, "tree"],
 ];
 
 const MOOD_ACCENTS: Record<Mood, Accent[]> = {
@@ -186,9 +195,9 @@ export function sceneFromText(text: string, opts: { seed: string; mood?: Mood | 
   const theme = themeOf(text, r);
   let [subject, arrangement] = pick(r, PICTURES[theme]);
 
-  // A thing named in the entry can be the subject, if it fits the theme's feeling.
+  // A thing named in the entry is a likely subject: people expect their boat to be a boat.
   const things = THING_SUBJECTS.filter(([re]) => re.test(text)).map(([, s]) => s);
-  if (things.length && (theme === "day" || theme === "rest" || theme === "thought" || theme === "home" || r() < 0.4)) {
+  if (things.length && (theme === "day" || theme === "rest" || theme === "thought" || theme === "home" || r() < 0.7)) {
     subject = pick(r, things);
     if (subject === "moon" || subject === "lighthouse") arrangement = "alone";
     else if (theme === "connection" || theme === "distance") arrangement = theme === "distance" ? "reaching" : "together";
