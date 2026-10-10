@@ -1,0 +1,419 @@
+{
+  "about_this_file": "A design brief for Leaves, a private journaling app. Use it to create graphics (icons, illustrations, backgrounds, splash screens, store art) that match the app. Every value comes from the app's real design files.",
+  "app": {
+    "name": "Leaves",
+    "one_line": "A calm, private journal for your phone. Write about your day, then receive a small drawing and a quotation to keep.",
+    "platform": "Phone-first progressive web app (installs to the home screen on iPhone and Android). Portrait, one column.",
+    "audience": "Thoughtful adults; people who like philosophy, nature and quiet. Made by philosophy students and alumni of SF State and UC Berkeley.",
+    "feeling": [
+      "calm",
+      "unhurried",
+      "tender",
+      "welcoming",
+      "private",
+      "like a notebook, not a stage"
+    ],
+    "never": [
+      "feeds, likes, streaks or anything that performs",
+      "loud colors",
+      "stock-photo realism",
+      "faces of people",
+      "text or letters inside illustrations",
+      "frames, borders or logos inside illustrations"
+    ],
+    "core_imagery": "Nature and falling leaves: a single tree that grows one leaf per entry, grass at the bottom of the screen, leaves drifting down slowly, paper-cut edges, soft hand-drawn outlines."
+  },
+  "visual_language": {
+    "style": "Soft, cozy storybook-cartoon. Simple rounded shapes, gentle hand-drawn outlines in dark bark brown, flat color with a hint of colored-pencil texture and paper grain. One clear subject, lots of breathing room.",
+    "outline_color": "#4a3b2c (bark); #1a1611 in night mode",
+    "texture": "barely visible paper grain (about 3% opacity), hand-cut paper edges on pictures",
+    "shapes": "rounded; wobbly paper-cut rectangle for entry pictures; leaf shape is a pointed ellipse with a single center vein",
+    "leaf_shape_svg": {
+      "viewBox": "-10 -11 20 22",
+      "leaf_path": "M0 10 C6 6 7 -2 0 -10 C-7 -2 -6 6 0 10 Z",
+      "vein_path": "M0 9 L0 -6",
+      "stroke_width": 1.2,
+      "vein_width": 0.9,
+      "vein_opacity": 0.7
+    },
+    "small_details": "tiny ditsy floral prints like old cotton fabric on small details; an occasional small woodland creature, simply drawn; fireflies, petals, butterflies as light accents",
+    "rules_for_pictures": [
+      "nature and objects only; no people's faces (a tiny figure seen from far behind is fine)",
+      "no text, letters, logos, borders or frames in the image",
+      "square composition, subject placed left, center or right with space around it",
+      "calm limited palette; touches of honey yellow and rosehip pink only as accents",
+      "must read clearly at 96 px thumbnail size as well as large"
+    ]
+  },
+  "color": {
+    "note": "Two themes: Daylight (default, 'leaf paper') and Lamplight (night, 'night fern'). Decoration colors are never used for text.",
+    "daylight": {
+      "color-bg": "#eaf0e3",
+      "color-raised": "#f7faf2",
+      "color-text": "#2b3326",
+      "color-text-muted": "#5c6655",
+      "color-accent": "#3d6645",
+      "color-on-accent": "#f7faf2",
+      "color-hairline": "#d6dfcc",
+      "color-control-outline": "#5c6655",
+      "color-honey": "#e8b54a",
+      "color-rosehip": "#d98e8a",
+      "color-mist": "#c5dbdf",
+      "color-grass": "#7fa36f",
+      "color-grass-deep": "#5f8a5a",
+      "color-bark-line": "#4a3b2c",
+      "color-trunk": "#6b5641",
+      "color-scrim": "rgb(43 51 38 / 0.28)",
+      "mood-calm": "#86ad8f",
+      "mood-joyful": "#e8b54a",
+      "mood-tender": "#d98e8a",
+      "mood-grateful": "#c2a24c",
+      "mood-hopeful": "#8dbf6a",
+      "mood-curious": "#6fa3a8",
+      "mood-wistful": "#9db9be",
+      "mood-restless": "#d9985f",
+      "mood-tired": "#a5a384",
+      "mood-heavy": "#5e7a66",
+      "mood-none": "#7fa36f"
+    },
+    "lamplight": {
+      "color-bg": "#1e2923",
+      "color-raised": "#26322b",
+      "color-text": "#e9e4d3",
+      "color-text-muted": "#aeb5a5",
+      "color-accent": "#9cc0a0",
+      "color-on-accent": "#1e2923",
+      "color-hairline": "#3a463f",
+      "color-control-outline": "#aeb5a5",
+      "color-honey": "#e0b05a",
+      "color-rosehip": "#c98a84",
+      "color-mist": "#3e545a",
+      "color-grass": "#3f5a45",
+      "color-grass-deep": "#344b3a",
+      "color-bark-line": "#1a1611",
+      "color-trunk": "#6a5a48",
+      "color-scrim": "rgb(10 14 12 / 0.5)",
+      "mood-calm": "#6f927a",
+      "mood-joyful": "#d6a954",
+      "mood-tender": "#c98a84",
+      "mood-grateful": "#b09450",
+      "mood-hopeful": "#7fa663",
+      "mood-curious": "#5f8f93",
+      "mood-wistful": "#7f9ca1",
+      "mood-restless": "#c48a58",
+      "mood-tired": "#8e8c73",
+      "mood-heavy": "#587262",
+      "mood-none": "#6a8c63"
+    },
+    "mood_leaf_colors_meaning": {
+      "calm": "soft sage green",
+      "joyful": "honey yellow",
+      "tender": "rosehip pink",
+      "grateful": "gold-olive",
+      "hopeful": "fresh green",
+      "curious": "teal",
+      "wistful": "pale mist blue",
+      "restless": "warm orange",
+      "tired": "dusty olive",
+      "heavy": "deep moss"
+    },
+    "illustration_palette": [
+      "leaf green",
+      "moss",
+      "fern",
+      "pale sage paper",
+      "misty blue sky",
+      "honey yellow (accent)",
+      "rosehip pink (accent)",
+      "bark brown outlines"
+    ]
+  },
+  "typography": {
+    "writing_and_titles": {
+      "family": "Literata (serif)",
+      "alternative_for_writing": "Atkinson Hyperlegible",
+      "use": "entry text, titles, quotations (quotations in italic)"
+    },
+    "interface": {
+      "family": "Nunito (rounded sans)",
+      "weights": [
+        500,
+        700
+      ]
+    },
+    "scale_px": {
+      "small": 15,
+      "body": 17,
+      "large": 20,
+      "heading": 24,
+      "display": 30
+    },
+    "line_height": {
+      "writing": 1.65,
+      "interface": 1.45
+    },
+    "reading_measure": "about 60 to 70 characters"
+  },
+  "layout_and_shape": {
+    "spacing_px": [
+      4,
+      8,
+      16,
+      24,
+      32,
+      40,
+      48,
+      64,
+      80
+    ],
+    "page_gutter_px": 24,
+    "column_max_px": 640,
+    "touch_target_min_px": 44,
+    "corner_radius_px": {
+      "chip": 8,
+      "button": 14,
+      "thumbnail": 14,
+      "photo": 24,
+      "pill": 999
+    },
+    "icons": "rounded line icons, 2 px stroke, round caps and joins, 24 px grid, always paired with a text label",
+    "motion": "slow and soft: fades about 300 ms; leaves fall for about 4 seconds; a gentle 4 second 'breathing' loader; all motion reduces to short fades when Reduce motion is on"
+  },
+  "screens": [
+    {
+      "name": "Welcome",
+      "description": "One sentence, a Begin button, a few leaves drifting behind, grass along the bottom edge."
+    },
+    {
+      "name": "Write",
+      "description": "Today's date, a quiet italic quotation, photos with captions beneath them like a blog, a large serif writing area, a bottom bar (Add place, Keep from AI, Finish) above a strip of grass."
+    },
+    {
+      "name": "Entry",
+      "description": "Hand-drawn picture on a paper-cut edge at the top, serif title, date stamp, photos with italic captions, the writer's text, then the quotation and a short reflection."
+    },
+    {
+      "name": "Entries",
+      "description": "A bare tree that grows one leaf per entry (each leaf colored by mood), then a vine timeline of entries with small picture thumbnails."
+    },
+    {
+      "name": "Voices",
+      "description": "A library of about 285 quotations from about 137 voices across history, grouped by tradition."
+    },
+    {
+      "name": "Settings, Recently deleted, About",
+      "description": "Plain, calm lists on leaf paper."
+    }
+  ],
+  "illustration_system": {
+    "description": "Every entry gets one small picture, chosen as a visual metaphor for what the entry is really about. The picture is composed from the vocabulary below: one subject, how many there are and how they relate, a setting, weather, light and up to three small accents.",
+    "examples_of_meaning": [
+      "someone who made the day better: two birds together on a branch",
+      "a message across a distance: two lanterns reaching toward each other",
+      "a decision: a path that forks",
+      "holding a lot at once: a cairn of balanced stones",
+      "a beginning: a seedling in the first light",
+      "something new: an open door",
+      "grief: a lone tree in mist",
+      "rest: a sleeping fox"
+    ],
+    "subjects": [
+      "tree",
+      "sapling",
+      "flowers",
+      "birds",
+      "nest",
+      "fox",
+      "boat",
+      "paper boat",
+      "lighthouse",
+      "bridge",
+      "path",
+      "mountain",
+      "moon",
+      "kite",
+      "stones",
+      "house",
+      "door",
+      "bench",
+      "lantern",
+      "candle",
+      "teacup",
+      "open book",
+      "letter",
+      "umbrella"
+    ],
+    "arrangements": {
+      "values": [
+        "alone",
+        "together",
+        "reaching",
+        "apart",
+        "gathered"
+      ],
+      "meaning": "alone is one; together, reaching and apart are two; gathered is three"
+    },
+    "settings": [
+      "meadow",
+      "hills",
+      "water",
+      "shore",
+      "mountains",
+      "garden",
+      "indoors",
+      "sky"
+    ],
+    "weather": [
+      "clear",
+      "clouds",
+      "rain",
+      "snow",
+      "mist",
+      "wind",
+      "stars"
+    ],
+    "light": {
+      "values": [
+        "soft",
+        "glow",
+        "rays",
+        "dim"
+      ],
+      "meaning": "glow is warmth, rays is hope breaking through, dim is heaviness"
+    },
+    "accents": [
+      "flowers",
+      "falling leaves",
+      "petals",
+      "fireflies",
+      "birds in flight",
+      "butterflies",
+      "rainbow",
+      "tall grass"
+    ],
+    "focus": [
+      "left",
+      "center",
+      "right"
+    ],
+    "seasons": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter"
+    ],
+    "times_of_day": [
+      "dawn",
+      "morning",
+      "afternoon",
+      "evening",
+      "night"
+    ],
+    "moods": [
+      "calm",
+      "joyful",
+      "tender",
+      "grateful",
+      "hopeful",
+      "curious",
+      "wistful",
+      "restless",
+      "tired",
+      "heavy"
+    ],
+    "classic_motifs": [
+      "a single tree",
+      "falling leaves",
+      "a path through tall grass",
+      "a small boat on still water",
+      "a lit window at dusk",
+      "a seedling",
+      "a moon over a field",
+      "rain on a pond",
+      "two birds on a branch",
+      "a bench under a tree",
+      "a teacup by a window",
+      "a bridge over a stream"
+    ]
+  },
+  "assets_wanted": [
+    {
+      "name": "App icon",
+      "sizes_px": [
+        1024,
+        512,
+        192,
+        180
+      ],
+      "notes": "a single leaf or a small tree on leaf-green paper; must also work as a maskable icon with a safe zone of about 80% in the center; no text"
+    },
+    {
+      "name": "Entry pictures",
+      "sizes_px": [
+        1024,
+        256
+      ],
+      "notes": "square, paper-cut edge, soft outlines; produce a set per subject in the vocabulary, in daylight and night variants"
+    },
+    {
+      "name": "Falling-leaf set",
+      "notes": "6 to 10 leaf variations (maple, birch, oak, ginkgo, simple) in the mood palette, transparent background, about 96 px, for the drifting-leaves animation"
+    },
+    {
+      "name": "Tree growth stages",
+      "notes": "a bare tree that gains leaves; 8 stages from sapling to full autumn canopy, transparent background"
+    },
+    {
+      "name": "Grass strip",
+      "notes": "a seamless horizontal tuft pattern about 28 px tall with tiny honey and rosehip flower dots; daylight and night versions"
+    },
+    {
+      "name": "Welcome and splash backgrounds",
+      "sizes_px": [
+        "1170x2532",
+        "1290x2796"
+      ],
+      "notes": "very quiet; leaf-paper color, faint grain, a few drifting leaves; iPhone launch screens in light and dark"
+    },
+    {
+      "name": "Store and share art",
+      "sizes_px": [
+        "1080x1350"
+      ],
+      "notes": "shareable card: picture, title, a line of text, an italic quotation; same type and colors as the app"
+    }
+  ],
+  "prompt_for_picture_generation": {
+    "template": "A small square illustration in a soft, cozy storybook-cartoon style. Simple rounded shapes, gentle hand-drawn outlines in dark bark brown, flat color with a hint of colored-pencil texture and paper grain. A calm, limited palette: leaf green, moss, fern, pale sage paper, misty blue sky, with small touches of honey yellow and rosehip pink. Nature at the center, uncluttered, with plenty of breathing room and one clear subject. Tiny ditsy floral prints, like old cotton fabric, may appear on small details. An occasional small woodland creature, simply drawn, is welcome. No text, letters, logos, borders, or frames. No photorealism and no people's faces; a tiny figure seen from far behind is fine. Feeling: quiet and tender, touched by {one of the moods}. Scene: {ONE SENTENCE DESCRIBING NATURE AND OBJECTS ONLY}. Season: {spring|summer|autumn|winter}. Time of day: {dawn|morning|afternoon|evening|night}.",
+    "tips": [
+      "Ask for a transparent background or flat pale sage paper color.",
+      "Ask for 'no text, no people's faces'.",
+      "Generate several and keep the quietest."
+    ]
+  },
+  "quotation_style": {
+    "display": "serif italic, left aligned, quotation marks for exact quotes; paraphrases appear without quotation marks and are credited 'after Author'",
+    "credit": "author in bold UI sans, source in regular weight, muted color",
+    "traditions_in_the_library": [
+      "Egypt, Greece and Rome",
+      "China and Japan",
+      "India and Nepal",
+      "Persia, the Arab world and Islam",
+      "Jewish and Christian voices",
+      "Europe",
+      "Existentialists and phenomenologists",
+      "Virtue, care and the good life",
+      "Justice and liberation",
+      "The Americas",
+      "Africa and its diaspora",
+      "Nature writers",
+      "Philosophers of today"
+    ]
+  },
+  "accessibility": [
+    "text contrast at least 4.5:1",
+    "decoration never carries meaning alone",
+    "everything works with Reduce motion",
+    "touch targets at least 44 px"
+  ]
+}
