@@ -12,6 +12,7 @@ import "./styles/base.css";
 import "./styles/app.css";
 import { App } from "./App";
 import { reloadForUpdate } from "./components/ErrorBoundary";
+import { showToast } from "./components/Toast";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -25,7 +26,28 @@ window.addEventListener("vite:preloadError", (event) => {
 });
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  // The first install takes control quietly. A later one means a new release is ready:
+  // say so and let the person choose when to reload, so nothing is interrupted mid-sentence.
+  let controlled = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!controlled) {
+      controlled = true;
+      return;
+    }
+    showToast("A new version of Leaves is ready.", { label: "Reload", run: () => location.reload() }, 30_000);
+  });
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        // An installed app can stay open for days; look for a new release when it comes back into view.
+        let last = Date.now();
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState !== "visible" || Date.now() - last < 30 * 60_000) return;
+          last = Date.now();
+          void reg.update().catch(() => undefined);
+        });
+      })
+      .catch(() => undefined);
   });
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { LEAF_PATH, LEAF_VEIN } from "./LeafShape";
-import { seeded, range, pick } from "../lib/rng";
+import { leafUrl, useResolvedTheme } from "../lib/art";
+import { seeded, range } from "../lib/rng";
 
 /**
  * The one orchestrated moment: after Finish, six leaves drift down slowly for
@@ -8,9 +8,9 @@ import { seeded, range, pick } from "../lib/rng";
  */
 export function LeafFall({ seed, onDone }: { seed: string; onDone?: () => void }) {
   const [gone, setGone] = useState(false);
+  const theme = useResolvedTheme();
   const leaves = useMemo(() => {
     const rand = seeded(seed + ":fall");
-    const colors = ["var(--mood-hopeful)", "var(--color-honey)", "var(--color-rosehip)", "var(--mood-calm)", "var(--mood-restless)"];
     const count = 6;
     return Array.from({ length: count }, (_, i) => ({
       left: ((i + 0.5) / count) * 100 + range(rand, -6, 6),
@@ -20,7 +20,7 @@ export function LeafFall({ seed, onDone }: { seed: string; onDone?: () => void }
       duration: range(rand, 3300, 4000),
       rest: range(rand, -80, 80),
       size: range(rand, 20, 30),
-      color: pick(rand, colors),
+      shape: Math.floor(rand() * 10),
       restY: range(rand, 0, 18),
     }));
   }, [seed]);
@@ -37,12 +37,13 @@ export function LeafFall({ seed, onDone }: { seed: string; onDone?: () => void }
   return (
     <div className="leaf-fall" aria-hidden="true">
       {leaves.map((l, i) => (
-        <svg
+        <img
           key={i}
           className="leaf-fall__leaf"
-          viewBox="-10 -11 20 22"
-          width={l.size}
-          height={l.size}
+          src={leafUrl(theme, l.shape)}
+          alt=""
+          width={l.size * 1.6}
+          height={l.size * 1.6}
           style={
             {
               left: `${l.left}%`,
@@ -54,10 +55,7 @@ export function LeafFall({ seed, onDone }: { seed: string; onDone?: () => void }
               animationDuration: `${l.duration}ms, 900ms`,
             } as React.CSSProperties
           }
-        >
-          <path d={LEAF_PATH} fill={l.color} stroke="var(--color-bark-line)" strokeWidth="1.2" strokeLinejoin="round" />
-          <path d={LEAF_VEIN} stroke="var(--color-bark-line)" strokeWidth="0.9" strokeLinecap="round" opacity="0.7" />
-        </svg>
+        />
       ))}
     </div>
   );

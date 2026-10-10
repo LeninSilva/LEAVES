@@ -469,13 +469,11 @@
   height: calc(var(--grass-height) + env(safe-area-inset-bottom));
   z-index: var(--z-bar);
   pointer-events: none;
-  background: var(--color-bg);
+  background: var(--color-bg) url("/art/grass/daylight.svg") repeat-x left top / 512px var(--grass-height);
 }
 
-.grass svg {
-  display: block;
-  height: var(--grass-height);
-  width: 100%;
+:root[data-theme="lamplight"] .grass {
+  background-image: url("/art/grass/lamplight.svg");
 }
 
 :root[data-keyboard="open"] .grass {
@@ -1058,7 +1056,9 @@
 
 .switch {
   display: flex;
+  flex-wrap: wrap;
   width: fit-content;
+  max-width: 100%;
   margin: var(--space-1) 0 var(--space-2);
   padding: 3px;
   border: 1.5px solid var(--color-control-outline);
@@ -1069,7 +1069,7 @@
   display: inline-flex;
   align-items: center;
   min-height: calc(var(--target) - 2px);
-  padding: 0 var(--space-2);
+  padding: 0 clamp(10px, 3vw, var(--space-2));
   border-radius: calc(var(--radius-button) - 3px);
   color: var(--color-text);
   font-weight: var(--weight-ui-strong);

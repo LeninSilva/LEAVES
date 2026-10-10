@@ -6,7 +6,16 @@ const SHELL = `leaves-shell-${VERSION}`;
 // a page opened before an update can still load the screens it asks for.
 const ASSETS = "leaves-assets";
 const META = "leaves-meta";
-const SHELL_FILES = ["/", "/manifest.webmanifest", "/icons/icon.svg"];
+// The drifting leaves are tiny; keep every one so none is missing when offline.
+const LEAVES = ["01-simple-calm", "02-birch-joyful", "03-oak-tender", "04-maple-grateful", "05-ginkgo-hopeful", "06-simple-curious", "07-birch-wistful", "08-oak-restless", "09-maple-tired", "10-ginkgo-heavy"];
+const SHELL_FILES = [
+  "/",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/art/grass/daylight.svg",
+  "/art/grass/lamplight.svg",
+  ...["daylight", "lamplight"].flatMap((t) => LEAVES.map((n) => `/art/leaves/${t}/${n}.svg`)),
+];
 const isAsset = (path) => path.startsWith("/assets/");
 
 self.addEventListener("install", (event) => {
@@ -80,7 +89,7 @@ self.addEventListener("fetch", (event) => {
       (hit) =>
         hit ||
         fetch(req).then((res) => {
-          if (res.ok && (isAsset(url.pathname) || url.pathname.startsWith("/icons/"))) {
+          if (res.ok && (isAsset(url.pathname) || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/art/"))) {
             const copy = res.clone();
             caches.open(isAsset(url.pathname) ? ASSETS : SHELL).then((c) => c.put(req, copy));
           }

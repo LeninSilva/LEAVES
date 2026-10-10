@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 /**
  * A native <dialog>, which gives focus trapping, Escape to close and the
@@ -18,6 +18,7 @@ export function Dialog({
   describedBy?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -28,7 +29,7 @@ export function Dialog({
     <dialog
       ref={ref}
       className="dialog"
-      aria-labelledby="dialog-title"
+      aria-labelledby={titleId}
       aria-describedby={describedBy}
       onClose={onClose}
       onClick={(e) => {
@@ -37,7 +38,7 @@ export function Dialog({
       }}
     >
       <div className="dialog__body">
-        <h2 id="dialog-title" className="dialog__title">
+        <h2 id={titleId} className="dialog__title">
           {title}
         </h2>
         {children}
@@ -64,9 +65,10 @@ export function Confirm({
   onCancel: () => void;
   danger?: boolean;
 }) {
+  const bodyId = useId();
   return (
-    <Dialog open={open} onClose={onCancel} title={title} describedBy="confirm-body">
-      <p id="confirm-body" className="dialog__text">
+    <Dialog open={open} onClose={onCancel} title={title} describedBy={bodyId}>
+      <p id={bodyId} className="dialog__text">
         {body}
       </p>
       <div className="dialog__actions">

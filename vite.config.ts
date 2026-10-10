@@ -17,7 +17,7 @@ function serviceWorker(): Plugin {
         // converter, which is fetched and cached the first time it's needed.
         .filter((name) => !name.endsWith(".map") && !name.endsWith(".woff") && !name.includes("heic2any"))
         .map((name) => "/" + name);
-      const precache = ["/", "/manifest.webmanifest", "/icons/icon.svg", ...assets];
+      const precache = ["/", "/manifest.webmanifest", "/icons/icon-192.png", ...assets];
       const version = Date.now().toString(36);
       const source = readFileSync("src/sw.js", "utf8")
         .replace("__PRECACHE__", JSON.stringify(precache))
